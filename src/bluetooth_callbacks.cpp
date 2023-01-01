@@ -1,37 +1,45 @@
 #include "bluetooth_callbacks.h"
+#include "esp32-hal-log.h"
 using namespace hardware;
 
 void bluetooth_server_callbacks::onConnect(BLEServer* pServer) {
     device_connected++;
-    ESP_LOGI(TAG, "Device connected");
+    log_i("Device connected");
+
     if (p_event_connect) p_event_connect();
 }
 
 void bluetooth_server_callbacks::onDisconnect(BLEServer* pServer) {
     device_connected--;
-    ESP_LOGI(TAG, "Device disconnected");
+    // время на подготовку стека bluetooth
+    delay(500);
+    log_i("Device disconnected");
+
+    if (pServer) pServer->startAdvertising();
     if (p_event_disconnect) p_event_disconnect();
 }
 
 void bluetooth_characteristic_callbacks::onWrite(BLECharacteristic *pCharacteristic) {
+    if (!pCharacteristic) {
+        log_w("Characteristic not found");
+        return;
+    }
     if (!p_event_receive) {
-        ESP_LOGW(TAG, "Event receive is missing");
+        log_w("Event receive not found");
         return;
     }
 
     std::string value = pCharacteristic->getValue();
     size_t size = value.length();
     if (size == 0 || size > BLUETOOTH_WRITE_SIZE) {
-        ESP_LOGW(TAG, "Receive data size is outside");
+        log_w("Receive data size is outside");
         return;
     }
 
-    net_frame_t frame;
+    net_frame_t frame{};
     memcpy(frame.bytes, value.c_str(), size);
     size--;
-
-    ESP_LOGI(TAG, "Receive data: id:%d, size:%zu, data:%s", frame.value.id, size, frame.value.data);
-    ESP_LOG_BUFFER_HEXDUMP(TAG, frame.bytes, size, ESP_LOG_DEBUG);
+    log_i("Receive data: id: %d, size: %zu, data: %s", frame.value.id, size, frame.value.data);
 
     p_event_receive(frame.value.id, frame.value.data, size);
 }

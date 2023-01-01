@@ -26,8 +26,6 @@ namespace hardware {
     class bluetooth_server_callbacks :
             public BLEServerCallbacks {
     public:
-        const char* TAG = "bluetooth server";
-
         /** Событие подключения */
         bluetooth_connect_t p_event_connect = nullptr;
         /** Событие отключения */
@@ -51,8 +49,6 @@ namespace hardware {
     class bluetooth_characteristic_callbacks :
             public BLECharacteristicCallbacks {
     public:
-        const char* TAG = "bluetooth characteristic";
-
         /** Событие входящих данных (id, data, size_data) */
         bluetooth_receive_t p_event_receive = nullptr;
 

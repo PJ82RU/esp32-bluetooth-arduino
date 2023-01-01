@@ -6,7 +6,6 @@
 #define BLUETOOTH_CHARACTERISTIC_UUID   "cc9e7b31-9834-488f-b762-aa62f5022dd4"
 
 void event_connect(uint8_t id, const uint8_t* data, size_t size) {
-    Serial.printf("Receive data: id:%02x, data:%s, size:%zu\n", id, data, size);
 }
 
 void setup() {

@@ -6,13 +6,9 @@
 #include <BLE2902.h>
 #include "bluetooth_callbacks.h"
 
-#define BLUETOOTH_TAG   "BLE"
-
 namespace hardware {
     class bluetooth {
     public:
-        static const char* TAG;
-
         static BLEServer* p_server;
         static BLEService* p_service;
         static BLECharacteristic* p_characteristic;
@@ -47,10 +43,6 @@ namespace hardware {
     private:
         static bluetooth_server_callbacks* _server_callbacks;
         static bluetooth_characteristic_callbacks* _characteristic_callback;
-        static bluetooth_disconnect_t _event_disconnect;
-
-        /** Событие отключения */
-        static void _on_device_disconnect();
     };
 }
 
