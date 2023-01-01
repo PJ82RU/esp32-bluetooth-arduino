@@ -72,7 +72,7 @@ bool bluetooth::send(uint8_t id, const uint8_t* data, size_t size) {
     net_frame_t frame;
     frame.value.id = id;
     memcpy(frame.value.data, data, size);
-	size++;
+    size++;
 
     ESP_LOGI(TAG, "Send data: id:%d, size:%zu, data:%s", frame.value.id, size, frame.value.data);
     ESP_LOG_BUFFER_HEXDUMP(TAG, frame.bytes, BLUETOOTH_WRITE_SIZE, ESP_LOG_DEBUG);
