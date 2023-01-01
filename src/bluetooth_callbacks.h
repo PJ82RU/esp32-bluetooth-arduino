@@ -19,9 +19,19 @@ namespace hardware {
     } net_frame_t;
 #pragma pack(pop)
 
+    typedef void (*bluetooth_connect_t)();
+    typedef void (*bluetooth_disconnect_t)();
+    typedef void (*bluetooth_receive_t)(uint8_t, const uint8_t*, size_t);
+
     class bluetooth_server_callbacks :
             public BLEServerCallbacks {
     public:
+        const char* TAG = "bluetooth server";
+
+        /** Событие подключения */
+        bluetooth_connect_t p_event_connect = nullptr;
+        /** Событие отключения */
+        bluetooth_disconnect_t p_event_disconnect = nullptr;
         /** Статус подключения */
         uint8_t device_connected = 0;
 
@@ -36,26 +46,21 @@ namespace hardware {
          * @param pServer Сервер
          */
         void onDisconnect(BLEServer *pServer) override;
-
-    private:
-        const char* TAG = "bluetooth server";
     };
 
     class bluetooth_characteristic_callbacks :
             public BLECharacteristicCallbacks {
     public:
+        const char* TAG = "bluetooth characteristic";
+
         /** Событие входящих данных (id, data, size_data) */
-        typedef void (*event_receive_t)(uint8_t, const uint8_t[], size_t);
-        event_receive_t event_receive = nullptr;
+        bluetooth_receive_t p_event_receive = nullptr;
 
         /**
          * Входящие данные
          * @param pCharacteristic
          */
         void onWrite(BLECharacteristic *pCharacteristic) override;
-
-    private:
-        const char* TAG = "bluetooth characteristic";
     };
 }
 
