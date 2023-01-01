@@ -16,4 +16,6 @@ void setup() {
 }
 
 void loop() {
+//    const uint8_t data[2] = { 0x00, 0x00 };
+//    hardware::bluetooth::send(0x03, data, 2);
 }
