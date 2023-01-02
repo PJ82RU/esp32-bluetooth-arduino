@@ -2,12 +2,6 @@
 #include "esp32-hal-log.h"
 using namespace hardware;
 
-BLEServer* bluetooth::p_server = nullptr;
-BLEService* bluetooth::p_service = nullptr;
-BLECharacteristic* bluetooth::p_characteristic = nullptr;
-bluetooth_server_callbacks* bluetooth::_server_callbacks = nullptr;
-bluetooth_characteristic_callbacks* bluetooth::_characteristic_callback = nullptr;
-
 void bluetooth::begin(const char* name, const char* service_uuid, const char* characteristic_uuid, bluetooth_receive_t p_event_receive,
                       bluetooth_connect_t p_event_connect, bluetooth_disconnect_t p_event_disconnect) {
     // BLE Device
@@ -80,3 +74,5 @@ bool bluetooth::send(uint8_t id, const uint8_t* data, size_t size) {
     delay(5);
     return true;
 }
+
+bluetooth bled;

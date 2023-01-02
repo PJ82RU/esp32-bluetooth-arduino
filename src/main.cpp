@@ -12,7 +12,7 @@ void setup() {
     Serial.begin(115200);
     delay(10);
 
-    hardware::bluetooth::begin(BTS_NAME, BLUETOOTH_SERVICE_UUID, BLUETOOTH_CHARACTERISTIC_UUID, event_connect);
+    bled.begin(BTS_NAME, BLUETOOTH_SERVICE_UUID, BLUETOOTH_CHARACTERISTIC_UUID, event_connect);
 }
 
 void loop() {
