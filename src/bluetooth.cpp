@@ -2,7 +2,7 @@
 #include "esp32-hal-log.h"
 using namespace hardware;
 
-void bluetooth::begin(const char* name, const char* service_uuid, const char* characteristic_uuid, bluetooth_receive_t p_event_receive,
+void bluetooth_c::begin(const char* name, const char* service_uuid, const char* characteristic_uuid, bluetooth_receive_t p_event_receive,
                       bluetooth_connect_t p_event_connect, bluetooth_disconnect_t p_event_disconnect) {
     // BLE Device
     BLEDevice::init(name);
@@ -47,11 +47,11 @@ void bluetooth::begin(const char* name, const char* service_uuid, const char* ch
     log_i("Advertising started");
 }
 
-uint8_t bluetooth::device_connected() {
+uint8_t bluetooth_c::device_connected() {
     return _server_callbacks ? _server_callbacks->device_connected : 0;
 }
 
-bool bluetooth::send(uint8_t id, const uint8_t* data, size_t size) {
+bool bluetooth_c::send(uint8_t id, const uint8_t* data, size_t size) {
     if (device_connected() == 0) {
         log_w("Device not connected");
         return false;
@@ -75,4 +75,4 @@ bool bluetooth::send(uint8_t id, const uint8_t* data, size_t size) {
     return true;
 }
 
-bluetooth bled;
+bluetooth_c bluetooth;

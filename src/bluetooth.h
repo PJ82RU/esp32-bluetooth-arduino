@@ -7,7 +7,7 @@
 #include "bluetooth_callbacks.h"
 
 namespace hardware {
-    class bluetooth {
+    class bluetooth_c {
     public:
         BLEServer* p_server = nullptr;
         BLEService* p_service = nullptr;
@@ -46,6 +46,6 @@ namespace hardware {
     };
 }
 
-extern hardware::bluetooth bled;
+extern hardware::bluetooth_c bluetooth;
 
 #endif //BACKEND_BLUETOOTH_H
