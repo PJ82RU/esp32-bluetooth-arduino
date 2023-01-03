@@ -1,15 +1,16 @@
 #include "bluetooth_callbacks.h"
 #include "esp32-hal-log.h"
+
 using namespace hardware;
 
-void bluetooth_server_callbacks::onConnect(BLEServer* pServer) {
+void bluetooth_server_callbacks::onConnect(BLEServer *pServer) {
     device_connected++;
     log_i("Device connected");
 
     if (p_event_connect) p_event_connect();
 }
 
-void bluetooth_server_callbacks::onDisconnect(BLEServer* pServer) {
+void bluetooth_server_callbacks::onDisconnect(BLEServer *pServer) {
     device_connected--;
     // время на подготовку стека bluetooth
     delay(500);

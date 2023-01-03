@@ -8,7 +8,7 @@
 #define BLUETOOTH_FRAME_DATA_SIZE   BLUETOOTH_WRITE_SIZE - 1
 
 namespace hardware {
-#pragma pack(push,1)
+#pragma pack(push, 1)
     /** Структура сетевого кадра */
     typedef union u_net_frame {
         struct {
@@ -20,8 +20,10 @@ namespace hardware {
 #pragma pack(pop)
 
     typedef void (*bluetooth_connect_t)();
+
     typedef void (*bluetooth_disconnect_t)();
-    typedef void (*bluetooth_receive_t)(uint8_t, const uint8_t*, size_t);
+
+    typedef void (*bluetooth_receive_t)(uint8_t, const uint8_t *, size_t);
 
     class bluetooth_server_callbacks :
             public BLEServerCallbacks {

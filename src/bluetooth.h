@@ -9,9 +9,9 @@
 namespace hardware {
     class bluetooth_c {
     public:
-        BLEServer* p_server = nullptr;
-        BLEService* p_service = nullptr;
-        BLECharacteristic* p_characteristic = nullptr;
+        BLEServer *p_server = nullptr;
+        BLEService *p_service = nullptr;
+        BLECharacteristic *p_characteristic = nullptr;
 
         /**
          * Инициализация объектов
@@ -22,8 +22,9 @@ namespace hardware {
          * @param p_event_connect     Метод события подключения
          * @param p_event_disconnect  Метод события отключения
          */
-        void begin(const char* name, const char* service_uuid, const char* characteristic_uuid, bluetooth_receive_t p_event_receive,
-                          bluetooth_connect_t p_event_connect = nullptr, bluetooth_disconnect_t p_event_disconnect = nullptr);
+        void begin(const char *name, const char *service_uuid, const char *characteristic_uuid,
+                   bluetooth_receive_t p_event_receive,
+                   bluetooth_connect_t p_event_connect = nullptr, bluetooth_disconnect_t p_event_disconnect = nullptr);
 
         /**
          * Статус подключения устройства
@@ -38,11 +39,11 @@ namespace hardware {
          * @param size Размер массива данных
          * @return Результат выполнения
          */
-        bool send(uint8_t id, const uint8_t* data, size_t size);
+        bool send(uint8_t id, const uint8_t *data, size_t size);
 
     private:
-        bluetooth_server_callbacks* _server_callbacks = nullptr;
-        bluetooth_characteristic_callbacks* _characteristic_callback = nullptr;
+        bluetooth_server_callbacks *_server_callbacks = nullptr;
+        bluetooth_characteristic_callbacks *_characteristic_callback = nullptr;
     };
 }
 
