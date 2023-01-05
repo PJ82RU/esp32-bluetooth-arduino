@@ -4,7 +4,7 @@
 #include <Arduino.h>
 #include <BLEUtils.h>
 
-#define BLUETOOTH_WRITE_SIZE        512
+#define BLUETOOTH_WRITE_SIZE        1024
 #define BLUETOOTH_FRAME_DATA_SIZE   BLUETOOTH_WRITE_SIZE - 1
 
 namespace hardware {
