@@ -19,19 +19,11 @@ namespace hardware {
     } net_frame_t;
 #pragma pack(pop)
 
-    typedef void (*bluetooth_connect_t)();
-
-    typedef void (*bluetooth_disconnect_t)();
-
-    typedef void (*bluetooth_receive_t)(uint8_t, const uint8_t *, size_t);
+    typedef void (*bluetooth_receive_t)(const char *, size_t);
 
     class bluetooth_server_callbacks :
             public BLEServerCallbacks {
     public:
-        /** Событие подключения */
-        bluetooth_connect_t p_event_connect = nullptr;
-        /** Событие отключения */
-        bluetooth_disconnect_t p_event_disconnect = nullptr;
         /** Статус подключения */
         uint8_t device_connected = 0;
 
