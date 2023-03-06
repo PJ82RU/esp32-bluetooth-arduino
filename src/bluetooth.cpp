@@ -69,7 +69,7 @@ bool bluetooth_c::send(uint8_t id, const uint8_t *data, size_t size) {
     frame.value.id = id;
     memcpy(frame.value.data, data, size);
     size++;
-    log_i("Send data: id: %d, size: %zu, data: %s", frame.value.id, size, frame.value.data);
+    log_d("Send data: id: %d, size: %zu, data: %s", frame.value.id, size, frame.value.data);
 
     // отправляем данные по bluetooth
     p_characteristic->setValue(frame.bytes, size);
@@ -94,7 +94,7 @@ bool bluetooth_c::receive(uint8_t &id, uint8_t *data, size_t &size) {
     size = _size - 1;
     memcpy(data, _buffer.value.data, size);
 
-    log_i("Receive data: id: %d, size: %zu, data: %s", id, size, data);
+    log_d("Receive data: id: %d, size: %zu, data: %s", id, size, data);
     _size = 0;
     return true;
 }
