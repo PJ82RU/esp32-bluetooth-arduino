@@ -104,12 +104,12 @@ bool bluetooth_c::handle() {
 //        log_w("Device not connected");
         return false;
     }
-    if (!_buffer.is_data || _buffer.size == 0) {
-//        log_d("No data to receive");
-        return false;
-    }
     if (!event_receive) {
         log_w("Event receive not found");
+        return false;
+    }
+    if (!_buffer.is_data || _buffer.size == 0) {
+//        log_d("No data to receive");
         return false;
     }
 
