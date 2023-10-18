@@ -1,26 +1,10 @@
 #ifndef ESP32_BLUETOOTH_ARDUINO_BLUETOOTH_CALLBACKS_H
 #define ESP32_BLUETOOTH_ARDUINO_BLUETOOTH_CALLBACKS_H
 
-#include <Arduino.h>
+#include "types.h"
 #include <BLEUtils.h>
 
-#define BLUETOOTH_WRITE_SIZE        512
-#define BLUETOOTH_FRAME_DATA_SIZE   BLUETOOTH_WRITE_SIZE - 1
-
 namespace hardware {
-#pragma pack(push, 1)
-    /** Структура сетевого кадра */
-    typedef union u_net_frame {
-        struct {
-            uint8_t id;
-            uint8_t data[BLUETOOTH_FRAME_DATA_SIZE];
-        } value;
-        uint8_t bytes[BLUETOOTH_WRITE_SIZE];
-    } net_frame_t;
-#pragma pack(pop)
-
-    typedef void (*bluetooth_receive_t)(const char *, size_t);
-
     class bluetooth_server_callbacks :
             public BLEServerCallbacks {
     public:
@@ -43,8 +27,7 @@ namespace hardware {
     class bluetooth_characteristic_callbacks :
             public BLECharacteristicCallbacks {
     public:
-        /** Событие входящих данных (id, data, size_data) */
-        bluetooth_receive_t p_event_receive = nullptr;
+        net_frame_buffer_t* buffer = nullptr;
 
         /**
          * Входящие данные

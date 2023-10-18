@@ -9,9 +9,9 @@
 namespace hardware {
     class bluetooth_c {
     public:
-        BLEServer *p_server = nullptr;
-        BLEService *p_service = nullptr;
-        BLECharacteristic *p_characteristic = nullptr;
+        typedef size_t (*bluetooth_receive_t)(uint8_t, uint8_t *, size_t);
+        /** Событие входящих данных (id, data, size_data) */
+        bluetooth_receive_t event_receive = nullptr;
 
         /**
          * Инициализация объектов
@@ -20,6 +20,15 @@ namespace hardware {
          * @param characteristic_uuid UUID характеристики
          */
         void begin(const char *name, const char *service_uuid, const char *characteristic_uuid);
+
+        /** Сервер */
+        BLEServer *server();
+        /** Сервис */
+        BLEService *service();
+        /** Характеристика */
+        BLECharacteristic *characteristic();
+
+        ~bluetooth_c();
 
         /**
          * Статус подключения устройства
@@ -37,34 +46,27 @@ namespace hardware {
         bool send(uint8_t id, const uint8_t *data, size_t size);
 
         /**
-         * @return Наличие входящих данных
-         */
-        bool is_receive() const;
-
-        /**
-         * Входящие данные по Bluetooth
-         * @param id   ID функции
-         * @param data Массив данных
-         * @param size Размер массива данных
+         * Метод обработки
          * @return Результат выполнения
          */
-        bool receive(uint8_t &id, uint8_t *data, size_t &size);
+        bool handle();
 
     private:
+        BLEServer *_server = nullptr;
+        BLEService *_service = nullptr;
+        BLECharacteristic *_characteristic = nullptr;
         bluetooth_server_callbacks *_server_callbacks = nullptr;
         bluetooth_characteristic_callbacks *_characteristic_callback = nullptr;
-        u_net_frame _buffer{};
-        size_t _size = 0;
+
+        net_frame_buffer_t _buffer{};
 
         /**
-         * Событие входящих данных
-         * @param data Данные
-         * @param size Размер данных
+         * Записать значение характеристики
+         * @param frame Кадр данных
+         * @param size Размер кадра данных
          */
-        static void _event_receive(const char *data, size_t size);
+        void _characteristic_set_value(net_frame_t &frame, size_t size);
     };
 }
-
-extern hardware::bluetooth_c bluetooth;
 
 #endif //BACKEND_BLUETOOTH_H

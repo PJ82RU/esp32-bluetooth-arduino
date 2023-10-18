@@ -24,17 +24,24 @@ void bluetooth_characteristic_callbacks::onWrite(BLECharacteristic *pCharacteris
         log_w("Characteristic not found");
         return;
     }
-    if (!p_event_receive) {
-        log_w("Event receive not found");
+    if (!buffer) {
+        log_w("The clipboard is missing");
         return;
     }
 
     std::string value = pCharacteristic->getValue();
-    size_t size = value.length();
-    if (size == 0 || size > BLUETOOTH_WRITE_SIZE) {
+    buffer->size = value.length();
+    if (buffer->size == 0) {
         log_w("Receive data size is outside");
         return;
     }
+    if (buffer->size > BLUETOOTH_WRITE_SIZE) {
+        buffer->size = BLUETOOTH_WRITE_SIZE;
+    }
 
-    p_event_receive(value.c_str(), size);
+    memcpy(buffer->frame.bytes, value.c_str(), buffer->size);
+    buffer->is_data = true;
+
+    log_d("Receive data: id: %d, size: %zu", buffer->frame.value.id, buffer->size - 1);
 }
+
