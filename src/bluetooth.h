@@ -7,7 +7,7 @@
 #include "bluetooth_callbacks.h"
 
 namespace hardware {
-    class bluetooth_c {
+    class Bluetooth {
     public:
         typedef size_t (*bluetooth_receive_t)(uint8_t, uint8_t *, size_t);
         /** Событие входящих данных (id, data, size_data) */
@@ -28,7 +28,7 @@ namespace hardware {
         /** Характеристика */
         BLECharacteristic *characteristic();
 
-        ~bluetooth_c();
+        ~Bluetooth();
 
         /**
          * Статус подключения устройства
@@ -44,6 +44,15 @@ namespace hardware {
          * @return Результат выполнения
          */
         bool send(uint8_t id, const uint8_t *data, size_t size);
+
+        /**
+         * Входящие данные по Bluetooth
+         * @param id   ID функции
+         * @param data Массив данных
+         * @param size Размер массива
+         * @return Размер данных
+         */
+        size_t receive(uint8_t &id, uint8_t *data, size_t size);
 
         /**
          * Метод обработки

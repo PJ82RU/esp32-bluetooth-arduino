@@ -3,7 +3,7 @@
 
 using namespace hardware;
 
-void bluetooth_c::begin(const char *name, const char *service_uuid, const char *characteristic_uuid) {
+void Bluetooth::begin(const char *name, const char *service_uuid, const char *characteristic_uuid) {
     // BLE Device
     BLEDevice::init(name);
     log_i("Device initialized, name: %s", name);
@@ -45,19 +45,19 @@ void bluetooth_c::begin(const char *name, const char *service_uuid, const char *
     log_i("Advertising started");
 }
 
-BLEServer *bluetooth_c::server() {
+BLEServer *Bluetooth::server() {
     return _server;
 }
 
-BLEService *bluetooth_c::service() {
+BLEService *Bluetooth::service() {
     return _service;
 }
 
-BLECharacteristic *bluetooth_c::characteristic() {
+BLECharacteristic *Bluetooth::characteristic() {
     return _characteristic;
 }
 
-bluetooth_c::~bluetooth_c() {
+Bluetooth::~Bluetooth() {
     if (_server) {
         BLEDevice::stopAdvertising();
         _service->stop();
@@ -68,11 +68,11 @@ bluetooth_c::~bluetooth_c() {
     }
 }
 
-uint8_t bluetooth_c::device_connected() {
+uint8_t Bluetooth::device_connected() {
     return _server_callbacks ? _server_callbacks->device_connected : 0;
 }
 
-void bluetooth_c::_characteristic_set_value(net_frame_t &frame, size_t size) {
+void Bluetooth::_characteristic_set_value(net_frame_t &frame, size_t size) {
     log_d("Send data: id: %d, size: %zu", frame.value.id, size);
 
     _characteristic->setValue(frame.bytes, size);
@@ -81,7 +81,7 @@ void bluetooth_c::_characteristic_set_value(net_frame_t &frame, size_t size) {
     delay(5);
 }
 
-bool bluetooth_c::send(uint8_t id, const uint8_t *data, size_t size) {
+bool Bluetooth::send(uint8_t id, const uint8_t *data, size_t size) {
     if (device_connected() == 0) {
         log_w("Device not connected");
         return false;
@@ -99,7 +99,28 @@ bool bluetooth_c::send(uint8_t id, const uint8_t *data, size_t size) {
     return true;
 }
 
-bool bluetooth_c::handle() {
+size_t Bluetooth::receive(uint8_t &id, uint8_t *data, size_t size) {
+    if (device_connected() == 0) {
+        log_w("Device not connected");
+        return 0;
+    }
+    if (!data || size == 0) {
+        log_w("No data");
+        return 0;
+    }
+    if (!_buffer.is_data || _buffer.size == 0) {
+        log_d("No data to receive");
+        return 0;
+    }
+    _buffer.is_data = false;
+    id = _buffer.frame.value.id;
+    size_t result_size = _buffer.size - 1;
+    if (result_size > size) result_size = size;
+    memcpy(data, _buffer.frame.value.data, result_size);
+    return result_size;
+}
+
+bool Bluetooth::handle() {
     if (device_connected() == 0) {
 //        log_w("Device not connected");
         return false;
