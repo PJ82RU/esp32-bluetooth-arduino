@@ -10,7 +10,7 @@ void Bluetooth::begin(const char *name, const char *service_uuid, const char *ch
 
     // BLE Server
     _server = BLEDevice::createServer();
-    _server_callbacks = new bluetooth_server_callbacks();
+    _server_callbacks = new BluetoothServerCallbacks();
     _server->setCallbacks(_server_callbacks);
     log_i("Server created");
 
@@ -19,14 +19,15 @@ void Bluetooth::begin(const char *name, const char *service_uuid, const char *ch
     log_i("Service created, uuid: %s", service_uuid);
 
     // BLE Characteristic
-    _characteristic = _service->createCharacteristic(
-            characteristic_uuid, BLECharacteristic::PROPERTY_READ | BLECharacteristic::PROPERTY_WRITE
-                                 | BLECharacteristic::PROPERTY_NOTIFY | BLECharacteristic::PROPERTY_INDICATE);
+    _characteristic = _service->createCharacteristic(characteristic_uuid, BLECharacteristic::PROPERTY_READ |
+                                                                          BLECharacteristic::PROPERTY_WRITE |
+                                                                          BLECharacteristic::PROPERTY_NOTIFY |
+                                                                          BLECharacteristic::PROPERTY_INDICATE);
     log_i("Characteristic created, uuid: %s", characteristic_uuid);
 
     // BLE Descriptor
     _characteristic->addDescriptor(new BLE2902());
-    _characteristic_callback = new bluetooth_characteristic_callbacks();
+    _characteristic_callback = new BluetoothCharacteristicCallbacks();
     _characteristic_callback->buffer = &_buffer;
     _characteristic->setCallbacks(_characteristic_callback);
     log_i("Descriptor added");

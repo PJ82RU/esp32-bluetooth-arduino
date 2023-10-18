@@ -5,7 +5,7 @@
 #include <BLEUtils.h>
 
 namespace hardware {
-    class bluetooth_server_callbacks :
+    class BluetoothServerCallbacks :
             public BLEServerCallbacks {
     public:
         /** Статус подключения */
@@ -24,7 +24,7 @@ namespace hardware {
         void onDisconnect(BLEServer *pServer) override;
     };
 
-    class bluetooth_characteristic_callbacks :
+    class BluetoothCharacteristicCallbacks :
             public BLECharacteristicCallbacks {
     public:
         net_frame_buffer_t* buffer = nullptr;

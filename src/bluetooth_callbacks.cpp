@@ -3,12 +3,12 @@
 
 using namespace hardware;
 
-void bluetooth_server_callbacks::onConnect(BLEServer *pServer) {
+void BluetoothServerCallbacks::onConnect(BLEServer *pServer) {
     device_connected++;
     log_i("Device connected");
 }
 
-void bluetooth_server_callbacks::onDisconnect(BLEServer *pServer) {
+void BluetoothServerCallbacks::onDisconnect(BLEServer *pServer) {
     device_connected--;
     log_i("Device disconnected");
 
@@ -19,7 +19,7 @@ void bluetooth_server_callbacks::onDisconnect(BLEServer *pServer) {
     }
 }
 
-void bluetooth_characteristic_callbacks::onWrite(BLECharacteristic *pCharacteristic) {
+void BluetoothCharacteristicCallbacks::onWrite(BLECharacteristic *pCharacteristic) {
     if (!pCharacteristic) {
         log_w("Characteristic not found");
         return;

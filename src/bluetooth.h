@@ -64,8 +64,8 @@ namespace hardware {
         BLEServer *_server = nullptr;
         BLEService *_service = nullptr;
         BLECharacteristic *_characteristic = nullptr;
-        bluetooth_server_callbacks *_server_callbacks = nullptr;
-        bluetooth_characteristic_callbacks *_characteristic_callback = nullptr;
+        BluetoothServerCallbacks *_server_callbacks = nullptr;
+        BluetoothCharacteristicCallbacks *_characteristic_callback = nullptr;
 
         net_frame_buffer_t _buffer{};
 
