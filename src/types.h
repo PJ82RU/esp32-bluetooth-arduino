@@ -24,4 +24,6 @@ typedef struct net_frame_buffer_t {
 } net_frame_buffer_t;
 #pragma pack(pop)
 
+typedef size_t (*ble_receive_t)(uint8_t, uint8_t *, size_t);
+
 #endif //ESP32_BLUETOOTH_ARDUINO_TYPES_H

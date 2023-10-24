@@ -1,21 +1,33 @@
-#include "bluetooth.h"
+#include "bluetooth_low_energy.h"
 #include "esp32-hal-log.h"
 
 using namespace hardware;
 
-void Bluetooth::begin(const char *name, const char *service_uuid, const char *characteristic_uuid) {
+bool BluetoothLowEnergy::start(const char *name, const char *service_uuid, const char *characteristic_uuid) {
+    if (_server) {
+        log_w("The server BLE is already running");
+        return false;
+    }
+
     // BLE Device
     BLEDevice::init(name);
     log_i("Device initialized, name: %s", name);
 
     // BLE Server
     _server = BLEDevice::createServer();
+    if (!_server) return false;
+
     _server_callbacks = new BluetoothServerCallbacks();
     _server->setCallbacks(_server_callbacks);
     log_i("Server created");
 
     // BLE Service
     _service = _server->createService(service_uuid);
+    if (!_service) {
+        BLEDevice::deinit(true);
+        delete _server_callbacks;
+        return false;
+    }
     log_i("Service created, uuid: %s", service_uuid);
 
     // BLE Characteristic
@@ -44,36 +56,45 @@ void Bluetooth::begin(const char *name, const char *service_uuid, const char *ch
     advertising->setMinPreferred(0x0);
     BLEDevice::startAdvertising();
     log_i("Advertising started");
+
+    return true;
 }
 
-BLEServer *Bluetooth::server() {
-    return _server;
-}
-
-BLEService *Bluetooth::service() {
-    return _service;
-}
-
-BLECharacteristic *Bluetooth::characteristic() {
-    return _characteristic;
-}
-
-Bluetooth::~Bluetooth() {
+void BluetoothLowEnergy::stop() {
     if (_server) {
         BLEDevice::stopAdvertising();
         _service->stop();
         BLEDevice::deinit(true);
+        _server = nullptr;
 
         delete _server_callbacks;
         delete _characteristic_callback;
+
+        log_i("Server BLE stopped");
     }
 }
 
-uint8_t Bluetooth::device_connected() {
+BluetoothLowEnergy::~BluetoothLowEnergy() {
+    stop();
+}
+
+BLEServer *BluetoothLowEnergy::server() {
+    return _server;
+}
+
+BLEService *BluetoothLowEnergy::service() {
+    return _service;
+}
+
+BLECharacteristic *BluetoothLowEnergy::characteristic() {
+    return _characteristic;
+}
+
+uint8_t BluetoothLowEnergy::device_connected() {
     return _server_callbacks ? _server_callbacks->device_connected : 0;
 }
 
-void Bluetooth::_characteristic_set_value(net_frame_t &frame, size_t size) {
+void BluetoothLowEnergy::_characteristic_set_value(net_frame_t &frame, size_t size) {
     log_d("Send data: id: %d, size: %zu", frame.value.id, size);
 
     _characteristic->setValue(frame.bytes, size);
@@ -82,7 +103,7 @@ void Bluetooth::_characteristic_set_value(net_frame_t &frame, size_t size) {
     delay(5);
 }
 
-bool Bluetooth::send(uint8_t id, const uint8_t *data, size_t size) {
+bool BluetoothLowEnergy::send(uint8_t id, const uint8_t *data, size_t size) {
     if (device_connected() == 0) {
         log_w("Device not connected");
         return false;
@@ -100,7 +121,7 @@ bool Bluetooth::send(uint8_t id, const uint8_t *data, size_t size) {
     return true;
 }
 
-size_t Bluetooth::receive(uint8_t &id, uint8_t *data, size_t size) {
+size_t BluetoothLowEnergy::receive(uint8_t &id, uint8_t *data, size_t size) {
     if (device_connected() == 0) {
         log_w("Device not connected");
         return 0;
@@ -121,25 +142,25 @@ size_t Bluetooth::receive(uint8_t &id, uint8_t *data, size_t size) {
     return result_size;
 }
 
-bool Bluetooth::handle() {
-    if (device_connected() == 0) {
-//        log_w("Device not connected");
+bool BluetoothLowEnergy::handle(ble_receive_t cb) {
+    if (!cb) {
+        log_e("Event receive not found");
         return false;
     }
-    if (!event_receive) {
-        log_w("Event receive not found");
+    if (device_connected() == 0) {
+        log_v("Device not connected");
         return false;
     }
     if (!_buffer.is_data || _buffer.size == 0) {
-//        log_d("No data to receive");
+        log_v("No data to receive");
         return false;
     }
 
-//    log_d("Incoming data");
+    log_d("Incoming data");
 
     net_frame_t frame = _buffer.frame;
     _buffer.is_data = false;
-    size_t size = event_receive(frame.value.id, frame.value.data, _buffer.size - 1);
+    size_t size = cb(frame.value.id, frame.value.data, _buffer.size - 1);
     if (size != 0) _characteristic_set_value(frame, size + 1);
 
     return true;

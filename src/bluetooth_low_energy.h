@@ -7,19 +7,21 @@
 #include "bluetooth_callbacks.h"
 
 namespace hardware {
-    class Bluetooth {
+    class BluetoothLowEnergy {
     public:
-        typedef size_t (*bluetooth_receive_t)(uint8_t, uint8_t *, size_t);
-        /** Событие входящих данных (id, data, size_data) */
-        bluetooth_receive_t event_receive = nullptr;
-
         /**
-         * Инициализация объектов
+         * Запустить BLE сервер
          * @param name                Имя устройства
          * @param service_uuid        UUID службы
          * @param characteristic_uuid UUID характеристики
+         * @return Результат выполнения
          */
-        void begin(const char *name, const char *service_uuid, const char *characteristic_uuid);
+        bool start(const char *name, const char *service_uuid, const char *characteristic_uuid);
+
+        /** Остановить BLE сервер */
+        void stop();
+
+        ~BluetoothLowEnergy();
 
         /** Сервер */
         BLEServer *server();
@@ -27,8 +29,6 @@ namespace hardware {
         BLEService *service();
         /** Характеристика */
         BLECharacteristic *characteristic();
-
-        ~Bluetooth();
 
         /**
          * Статус подключения устройства
@@ -56,9 +56,10 @@ namespace hardware {
 
         /**
          * Метод обработки
+         * @param cb Функция обратного вызова
          * @return Результат выполнения
          */
-        bool handle();
+        bool handle(ble_receive_t cb);
 
     private:
         BLEServer *_server = nullptr;
