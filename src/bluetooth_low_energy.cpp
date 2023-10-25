@@ -141,8 +141,8 @@ namespace hardware {
         return result_size;
     }
 
-    bool BluetoothLowEnergy::handle(ble_receive_t cb) {
-        if (!cb) {
+    bool BluetoothLowEnergy::handle() {
+        if (!cb_receive) {
             log_e("Event receive not found");
             return false;
         }
@@ -159,7 +159,7 @@ namespace hardware {
 
         net_frame_t frame = _buffer.frame;
         _buffer.is_data = false;
-        size_t size = cb(frame.value.id, frame.value.data, _buffer.size - 1);
+        size_t size = cb_receive(frame.value.id, frame.value.data, _buffer.size - 1);
         if (size != 0) _characteristic_set_value(frame, size + 1);
 
         return true;

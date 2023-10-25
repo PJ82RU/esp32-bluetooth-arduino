@@ -9,6 +9,9 @@
 namespace hardware {
     class BluetoothLowEnergy {
     public:
+        /** Функция обратного вызова входящих данных */
+        ble_receive_t cb_receive = nullptr;
+
         /**
          * Запустить BLE сервер
          * @param name                Имя устройства
@@ -56,10 +59,9 @@ namespace hardware {
 
         /**
          * Метод обработки
-         * @param cb Функция обратного вызова
          * @return Результат выполнения
          */
-        bool handle(ble_receive_t cb);
+        bool handle();
 
     private:
         BLEServer *_server = nullptr;
