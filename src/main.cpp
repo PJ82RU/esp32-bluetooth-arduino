@@ -7,7 +7,7 @@
 
 hardware::BluetoothLowEnergy ble;
 
-size_t bluetooth_receive_t(uint8_t id, uint8_t *bytes, size_t size) {
+size_t on_bluetooth_receive(uint8_t id, uint8_t *bytes, size_t size) {
     bytes[0] = 1;
     bytes[1] = 2;
     bytes[2] = 3;
@@ -19,10 +19,11 @@ void setup() {
     Serial.begin(115200);
     delay(1000);
 
+    ble.cb_receive = on_bluetooth_receive;
     ble.start(BTS_NAME, BLUETOOTH_SERVICE_UUID, BLUETOOTH_CHARACTERISTIC_UUID);
 }
 
 void loop() {
-    ble.handle(bluetooth_receive_t);
+    ble.handle();
 //    if (millis() > 15000) ble.stop();
 }
