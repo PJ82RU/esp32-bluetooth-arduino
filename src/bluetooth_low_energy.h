@@ -82,7 +82,7 @@ namespace hardware {
         void characteristic_set_value(net_frame_t &frame, size_t size);
 
     private:
-        TaskHandle_t task_cb{};
+        TaskHandle_t task_ble_cb{};
 
         BLEServer *ble_server = nullptr;
         BLEService *ble_service = nullptr;

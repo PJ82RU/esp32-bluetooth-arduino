@@ -28,14 +28,14 @@ namespace hardware {
         queue_ble_buffer = xQueueCreate(BLE_BUFFER_SIZE, sizeof(net_frame_t));
         log_i("Queue buffer created");
 
-        xTaskCreate(&task_callback, "BLE_CALLBACK", 8192, this, 15, &task_cb);
+        xTaskCreate(&task_callback, "BLE_CALLBACK", 8192, this, 15, &task_ble_cb);
         log_i("Task callback created");
     }
 
     BluetoothLowEnergy::~BluetoothLowEnergy() {
         end();
 
-        vTaskDelete(task_cb);
+        vTaskDelete(task_ble_cb);
         log_i("Task callback deleted");
         vQueueDelete(queue_ble_buffer);
         log_i("Queue buffer deleted");
