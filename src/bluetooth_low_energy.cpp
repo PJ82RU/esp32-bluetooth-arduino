@@ -26,6 +26,7 @@ namespace hardware {
 
     BluetoothLowEnergy::BluetoothLowEnergy() {
         queue_ble_buffer = xQueueCreate(BLE_BUFFER_SIZE, sizeof(net_frame_t));
+        log_i("Queue buffer created");
 
         xTaskCreate(&task_callback, "BLE_CALLBACK", 8192, this, 15, &task_cb);
         log_i("Task callback created");
@@ -36,6 +37,8 @@ namespace hardware {
 
         vTaskDelete(task_cb);
         log_i("Task callback deleted");
+        vQueueDelete(queue_ble_buffer);
+        log_i("Queue buffer deleted");
     }
 
     bool BluetoothLowEnergy::begin(const char *name, const char *service_uuid, const char *characteristic_uuid) {
