@@ -1,10 +1,26 @@
-#ifndef ESP32_BLUETOOTH_ARDUINO_BLUETOOTH_CALLBACKS_H
-#define ESP32_BLUETOOTH_ARDUINO_BLUETOOTH_CALLBACKS_H
+#ifndef ESP32_BLE_ARDUINO_BLE_CALLBACKS_H
+#define ESP32_BLE_ARDUINO_BLE_CALLBACKS_H
 
-#include "types.h"
+#include "Arduino.h"
 #include <BLEUtils.h>
 
+#define BLE_WRITE_SIZE          512
+#define BLE_FRAME_DATA_SIZE     509
+
 namespace hardware {
+
+#pragma pack(push, 1)
+/** Сетевой кадр */
+    typedef union net_frame_t {
+        struct {
+            uint8_t id;                             // ID пакета
+            uint16_t size;                          // Размер данных
+            uint8_t data[BLE_FRAME_DATA_SIZE];      // Данные
+        } value;
+        uint8_t bytes[BLE_WRITE_SIZE];
+    } net_frame_t;
+#pragma pack(pop)
+
     class BluetoothServerCallbacks :
             public BLEServerCallbacks {
     public:
@@ -27,7 +43,7 @@ namespace hardware {
     class BluetoothCharacteristicCallbacks :
             public BLECharacteristicCallbacks {
     public:
-        net_frame_buffer_t* buffer = nullptr;
+        QueueHandle_t queue_ble_buffer;
 
         /**
          * Входящие данные
@@ -37,4 +53,4 @@ namespace hardware {
     };
 }
 
-#endif //ESP32_BLUETOOTH_ARDUINO_BLUETOOTH_CALLBACKS_H
+#endif //ESP32_BLE_ARDUINO_BLE_CALLBACKS_H

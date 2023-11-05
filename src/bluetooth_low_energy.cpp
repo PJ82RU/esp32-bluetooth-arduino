@@ -2,8 +2,44 @@
 #include "esp32-hal-log.h"
 
 namespace hardware {
-    bool BluetoothLowEnergy::start(const char *name, const char *service_uuid, const char *characteristic_uuid) {
-        if (_server) {
+
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "EndlessLoop"
+#pragma ide diagnostic ignored "modernize-use-auto"
+
+    void task_callback(void *pv_parameters) {
+        BluetoothLowEnergy *ble = (BluetoothLowEnergy *) pv_parameters;
+        net_frame_t frame;
+
+        for (;;) {
+            if (ble->cb_receive) {
+                if (xQueueReceive(ble->queue_ble_buffer, &frame, portMAX_DELAY) == pdTRUE) {
+                    size_t size = ble->cb_receive(frame.value.id, frame.value.data, frame.value.size);
+                    if (size != 0) ble->characteristic_set_value(frame, size + 3);
+                }
+            } else
+                vTaskDelay(pdMS_TO_TICKS(100));
+        }
+    }
+
+#pragma clang diagnostic pop
+
+    BluetoothLowEnergy::BluetoothLowEnergy() {
+        queue_ble_buffer = xQueueCreate(BLE_BUFFER_SIZE, sizeof(net_frame_t));
+
+        xTaskCreate(&task_callback, "BLE_CALLBACK", 8192, this, 15, &task_cb);
+        log_i("Task callback created");
+    }
+
+    BluetoothLowEnergy::~BluetoothLowEnergy() {
+        end();
+
+        vTaskDelete(task_cb);
+        log_i("Task callback deleted");
+    }
+
+    bool BluetoothLowEnergy::begin(const char *name, const char *service_uuid, const char *characteristic_uuid) {
+        if (ble_server) {
             log_w("The server BLE is already running");
             return false;
         }
@@ -13,38 +49,38 @@ namespace hardware {
         log_i("Device initialized, name: %s", name);
 
         // BLE Server
-        _server = BLEDevice::createServer();
-        if (!_server) return false;
+        ble_server = BLEDevice::createServer();
+        if (!ble_server) return false;
 
-        _server_callbacks = new BluetoothServerCallbacks();
-        _server->setCallbacks(_server_callbacks);
+        ble_server_callbacks = new BluetoothServerCallbacks();
+        ble_server->setCallbacks(ble_server_callbacks);
         log_i("Server created");
 
         // BLE Service
-        _service = _server->createService(service_uuid);
-        if (!_service) {
+        ble_service = ble_server->createService(service_uuid);
+        if (!ble_service) {
             BLEDevice::deinit(true);
-            delete _server_callbacks;
+            delete ble_server_callbacks;
             return false;
         }
         log_i("Service created, uuid: %s", service_uuid);
 
         // BLE Characteristic
-        _characteristic = _service->createCharacteristic(characteristic_uuid, BLECharacteristic::PROPERTY_READ |
-                                                                              BLECharacteristic::PROPERTY_WRITE |
-                                                                              BLECharacteristic::PROPERTY_NOTIFY |
-                                                                              BLECharacteristic::PROPERTY_INDICATE);
+        ble_characteristic = ble_service->createCharacteristic(characteristic_uuid, BLECharacteristic::PROPERTY_READ |
+                                                                                    BLECharacteristic::PROPERTY_WRITE |
+                                                                                    BLECharacteristic::PROPERTY_NOTIFY |
+                                                                                    BLECharacteristic::PROPERTY_INDICATE);
         log_i("Characteristic created, uuid: %s", characteristic_uuid);
 
         // BLE Descriptor
-        _characteristic->addDescriptor(new BLE2902());
-        _characteristic_callback = new BluetoothCharacteristicCallbacks();
-        _characteristic_callback->buffer = &_buffer;
-        _characteristic->setCallbacks(_characteristic_callback);
+        ble_characteristic->addDescriptor(new BLE2902());
+        ble_characteristic_callback = new BluetoothCharacteristicCallbacks();
+        ble_characteristic_callback->queue_ble_buffer = queue_ble_buffer;
+        ble_characteristic->setCallbacks(ble_characteristic_callback);
         log_i("Descriptor added");
 
         // Запуск сервиса
-        _service->start();
+        ble_service->start();
         log_i("Service started");
         delay(10);
 
@@ -59,45 +95,41 @@ namespace hardware {
         return true;
     }
 
-    void BluetoothLowEnergy::stop() {
-        if (_server) {
+    void BluetoothLowEnergy::end() {
+        if (ble_server) {
             BLEDevice::stopAdvertising();
-            _service->stop();
+            ble_service->stop();
             BLEDevice::deinit(true);
-            _server = nullptr;
+            ble_server = nullptr;
 
-            delete _server_callbacks;
-            delete _characteristic_callback;
+            delete ble_server_callbacks;
+            delete ble_characteristic_callback;
 
             log_i("Server BLE stopped");
         }
     }
 
-    BluetoothLowEnergy::~BluetoothLowEnergy() {
-        stop();
-    }
-
     BLEServer *BluetoothLowEnergy::server() {
-        return _server;
+        return ble_server;
     }
 
     BLEService *BluetoothLowEnergy::service() {
-        return _service;
+        return ble_service;
     }
 
     BLECharacteristic *BluetoothLowEnergy::characteristic() {
-        return _characteristic;
+        return ble_characteristic;
     }
 
     uint8_t BluetoothLowEnergy::device_connected() {
-        return _server_callbacks ? _server_callbacks->device_connected : 0;
+        return ble_server_callbacks ? ble_server_callbacks->device_connected : 0;
     }
 
-    void BluetoothLowEnergy::_characteristic_set_value(net_frame_t &frame, size_t size) {
-        log_d("Send data: id: %d, size: %zu", frame.value.id, size);
+    void BluetoothLowEnergy::characteristic_set_value(net_frame_t &frame, size_t size) {
+        log_d("Send data: id: 0x%02x, size: %zu", frame.value.id, size);
 
-        _characteristic->setValue(frame.bytes, size);
-        _characteristic->notify();
+        ble_characteristic->setValue(frame.bytes, size);
+        ble_characteristic->notify();
         // защита от перегруза стека bluetooth
         delay(5);
     }
@@ -114,8 +146,9 @@ namespace hardware {
 
         net_frame_t frame{};
         frame.value.id = id;
+        frame.value.size = size;
         memcpy(frame.value.data, data, size);
-        _characteristic_set_value(frame, size + 1);
+        characteristic_set_value(frame, size + 3);
 
         return true;
     }
@@ -129,39 +162,16 @@ namespace hardware {
             log_w("No data");
             return 0;
         }
-        if (!_buffer.is_data || _buffer.size == 0) {
-            log_d("No data to receive");
-            return 0;
-        }
-        _buffer.is_data = false;
-        id = _buffer.frame.value.id;
-        size_t result_size = _buffer.size - 1;
-        if (result_size > size) result_size = size;
-        memcpy(data, _buffer.frame.value.data, result_size);
-        return result_size;
-    }
 
-    bool BluetoothLowEnergy::handle() {
-        if (!cb_receive) {
-            log_e("Event receive not found");
-            return false;
-        }
-        if (device_connected() == 0) {
-            log_v("Device not connected");
-            return false;
-        }
-        if (!_buffer.is_data || _buffer.size == 0) {
-            log_v("No data to receive");
-            return false;
+        net_frame_t frame{};
+        if (xQueueReceive(queue_ble_buffer, &frame, 0) == pdTRUE) {
+            id = frame.value.id;
+            if (size > frame.value.size) size = frame.value.size;
+            memcpy(data, frame.value.data, size);
+            return size;
         }
 
-        log_d("Incoming data");
-
-        net_frame_t frame = _buffer.frame;
-        _buffer.is_data = false;
-        size_t size = cb_receive(frame.value.id, frame.value.data, _buffer.size - 1);
-        if (size != 0) _characteristic_set_value(frame, size + 1);
-
-        return true;
+        log_d("No data to receive");
+        return 0;
     }
 }

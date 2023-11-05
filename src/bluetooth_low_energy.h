@@ -6,11 +6,26 @@
 #include <BLE2902.h>
 #include "bluetooth_callbacks.h"
 
+#define BLE_BUFFER_SIZE     16      // 16 * sizeof(net_frame_t)
+
 namespace hardware {
+    typedef size_t (*ble_receive_t)(uint8_t, uint8_t *, size_t);
+
     class BluetoothLowEnergy {
     public:
         /** Функция обратного вызова входящих данных */
         ble_receive_t cb_receive = nullptr;
+
+        /**
+         * Обратный вызов входящего кадра
+         * @param pv_parameters
+         */
+        friend void task_callback(void *pv_parameters);
+
+        /** Bluetooth Low Energy */
+        BluetoothLowEnergy();
+
+        ~BluetoothLowEnergy();
 
         /**
          * Запустить BLE сервер
@@ -19,12 +34,11 @@ namespace hardware {
          * @param characteristic_uuid UUID характеристики
          * @return Результат выполнения
          */
-        bool start(const char *name, const char *service_uuid, const char *characteristic_uuid);
+        bool begin(const char *name, const char *service_uuid, const char *characteristic_uuid);
 
         /** Остановить BLE сервер */
-        void stop();
+        void end();
 
-        ~BluetoothLowEnergy();
 
         /** Сервер */
         BLEServer *server();
@@ -57,27 +71,24 @@ namespace hardware {
          */
         size_t receive(uint8_t &id, uint8_t *data, size_t size);
 
-        /**
-         * Метод обработки
-         * @return Результат выполнения
-         */
-        bool handle();
-
-    private:
-        BLEServer *_server = nullptr;
-        BLEService *_service = nullptr;
-        BLECharacteristic *_characteristic = nullptr;
-        BluetoothServerCallbacks *_server_callbacks = nullptr;
-        BluetoothCharacteristicCallbacks *_characteristic_callback = nullptr;
-
-        net_frame_buffer_t _buffer{};
+    protected:
+        QueueHandle_t queue_ble_buffer{};
 
         /**
          * Записать значение характеристики
          * @param frame Кадр данных
          * @param size Размер кадра данных
          */
-        void _characteristic_set_value(net_frame_t &frame, size_t size);
+        void characteristic_set_value(net_frame_t &frame, size_t size);
+
+    private:
+        TaskHandle_t task_cb{};
+
+        BLEServer *ble_server = nullptr;
+        BLEService *ble_service = nullptr;
+        BLECharacteristic *ble_characteristic = nullptr;
+        BluetoothServerCallbacks *ble_server_callbacks = nullptr;
+        BluetoothCharacteristicCallbacks *ble_characteristic_callback = nullptr;
     };
 }
 

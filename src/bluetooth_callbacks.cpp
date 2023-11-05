@@ -23,24 +23,18 @@ namespace hardware {
             log_w("Characteristic not found");
             return;
         }
-        if (!buffer) {
-            log_w("The clipboard is missing");
-            return;
-        }
 
         std::string value = pCharacteristic->getValue();
-        buffer->size = value.length();
-        if (buffer->size == 0) {
+        size_t size = value.length();
+        if (size < 2 || size > BLE_WRITE_SIZE) {
             log_w("Receive data size is outside");
             return;
         }
-        if (buffer->size > BLUETOOTH_WRITE_SIZE) {
-            buffer->size = BLUETOOTH_WRITE_SIZE;
-        }
 
-        memcpy(buffer->frame.bytes, value.c_str(), buffer->size);
-        buffer->is_data = true;
+        net_frame_t frame{};
+        memcpy(frame.bytes, value.c_str(), size);
+        xQueueSend(queue_ble_buffer, &frame, 0);
 
-        log_d("Receive data: id: %d, size: %zu", buffer->frame.value.id, buffer->size - 1);
+        log_d("Receive data: id: 0x%02x, size: %zu", frame.value.id, frame.value.size);
     }
 }
