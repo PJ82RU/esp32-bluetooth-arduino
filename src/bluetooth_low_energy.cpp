@@ -2,43 +2,19 @@
 #include "esp32-hal-log.h"
 
 namespace hardware {
-
-#pragma clang diagnostic push
-#pragma ide diagnostic ignored "EndlessLoop"
-#pragma ide diagnostic ignored "modernize-use-auto"
-
-    void task_callback(void *pv_parameters) {
-        BluetoothLowEnergy *ble = (BluetoothLowEnergy *) pv_parameters;
-        net_frame_t frame;
-
-        for (;;) {
-            if (ble->cb_receive) {
-                if (xQueueReceive(ble->queue_ble_buffer, &frame, portMAX_DELAY) == pdTRUE) {
-                    size_t size = ble->cb_receive(frame.value.id, frame.value.data, frame.value.size);
-                    if (size != 0) ble->characteristic_set_value(frame, size + 3);
-                }
-            } else
-                vTaskDelay(pdMS_TO_TICKS(100));
-        }
+    void BluetoothLowEnergy::on_response(void *p_value, void *p_parameters) {
+        auto *frame = (net_frame_t *) p_value;
+        auto *ble = (BluetoothLowEnergy *) p_parameters;
+        ble->characteristic_set_value(*frame);
     }
 
-#pragma clang diagnostic pop
-
-    BluetoothLowEnergy::BluetoothLowEnergy() {
-        queue_ble_buffer = xQueueCreate(BLE_BUFFER_SIZE, sizeof(net_frame_t));
-        log_i("Queue buffer created");
-
-        xTaskCreate(&task_callback, "BLE_CALLBACK", 8192, this, 15, &task_ble_cb);
-        log_i("Task callback created");
+    BluetoothLowEnergy::BluetoothLowEnergy() : callback(BLE_BUFFER_SIZE, sizeof(net_frame_t), "BLE_CALLBACK", 2048) {
+        callback.cb_receive = on_response;
+        callback.p_receive_parameters = this;
     }
 
     BluetoothLowEnergy::~BluetoothLowEnergy() {
         end();
-
-        vTaskDelete(task_ble_cb);
-        log_i("Task callback deleted");
-        vQueueDelete(queue_ble_buffer);
-        log_i("Queue buffer deleted");
     }
 
     bool BluetoothLowEnergy::begin(const char *name, const char *service_uuid, const char *characteristic_uuid) {
@@ -78,7 +54,7 @@ namespace hardware {
         // BLE Descriptor
         ble_characteristic->addDescriptor(new BLE2902());
         ble_characteristic_callback = new BluetoothCharacteristicCallbacks();
-        ble_characteristic_callback->queue_ble_buffer = queue_ble_buffer;
+        ble_characteristic_callback->callback = &callback;
         ble_characteristic->setCallbacks(ble_characteristic_callback);
         log_i("Descriptor added");
 
@@ -128,10 +104,10 @@ namespace hardware {
         return ble_server_callbacks ? ble_server_callbacks->device_connected : 0;
     }
 
-    void BluetoothLowEnergy::characteristic_set_value(net_frame_t &frame, size_t size) {
-        log_d("Send data: id: 0x%02x, size: %zu", frame.value.id, size);
+    void BluetoothLowEnergy::characteristic_set_value(net_frame_t &frame) {
+        log_d("Send data: id: 0x%02x, size: %zu", frame.value.id, frame.value.size);
 
-        ble_characteristic->setValue(frame.bytes, size);
+        ble_characteristic->setValue(frame.bytes, frame.value.size + BLE_HEADER_SIZE);
         ble_characteristic->notify();
         // защита от перегруза стека bluetooth
         delay(5);
@@ -151,8 +127,7 @@ namespace hardware {
         frame.value.id = id;
         frame.value.size = size;
         memcpy(frame.value.data, data, size);
-        characteristic_set_value(frame, size + 3);
-
+        characteristic_set_value(frame);
         return true;
     }
 
@@ -167,14 +142,13 @@ namespace hardware {
         }
 
         net_frame_t frame{};
-        if (xQueueReceive(queue_ble_buffer, &frame, 0) == pdTRUE) {
-            id = frame.value.id;
-            if (size > frame.value.size) size = frame.value.size;
-            memcpy(data, frame.value.data, size);
-            return size;
-        }
+        if (!callback.read(&frame)) return 0;
 
-        log_d("No data to receive");
-        return 0;
+        id = frame.value.id;
+        if (size > frame.value.size) size = frame.value.size;
+        memcpy(data, frame.value.data, size);
+
+        log_d("Reading data from the buffer: id: 0x%02x, size: %zu", frame.value.id, frame.value.size);
+        return size;
     }
 }

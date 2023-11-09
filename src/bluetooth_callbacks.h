@@ -3,14 +3,16 @@
 
 #include "Arduino.h"
 #include <BLEUtils.h>
+#include "callback.h"
 
 #define BLE_WRITE_SIZE          512
 #define BLE_FRAME_DATA_SIZE     509
+#define BLE_HEADER_SIZE         3
 
 namespace hardware {
 
 #pragma pack(push, 1)
-/** Сетевой кадр */
+    /** Сетевой кадр */
     typedef union net_frame_t {
         struct {
             uint8_t id;                             // ID пакета
@@ -43,7 +45,8 @@ namespace hardware {
     class BluetoothCharacteristicCallbacks :
             public BLECharacteristicCallbacks {
     public:
-        QueueHandle_t queue_ble_buffer;
+        /** Обратный вызов */
+        tools::Callback *callback = nullptr;
 
         /**
          * Входящие данные

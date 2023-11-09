@@ -33,8 +33,8 @@ namespace hardware {
 
         net_frame_t frame{};
         memcpy(frame.bytes, value.c_str(), size);
-        xQueueSend(queue_ble_buffer, &frame, 0);
+        callback->call(&frame);
 
-        log_d("Receive data: id: 0x%02x, size: %zu", frame.value.id, frame.value.size);
+        log_d("Receive data. Size: %zu", size);
     }
 }
