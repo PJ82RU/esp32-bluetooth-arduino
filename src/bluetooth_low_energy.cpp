@@ -8,7 +8,8 @@ namespace hardware {
         ble->characteristic_set_value(*frame);
     }
 
-    BluetoothLowEnergy::BluetoothLowEnergy(uint8_t num) : callback(num, sizeof(net_frame_t), "BLE_CALLBACK", 2048) {
+    BluetoothLowEnergy::BluetoothLowEnergy(uint8_t num, uint32_t stack_depth) :
+            callback(num, sizeof(net_frame_t), "BLE_CALLBACK", stack_depth) {
         callback.cb_receive = on_response;
         callback.p_receive_parameters = this;
     }
