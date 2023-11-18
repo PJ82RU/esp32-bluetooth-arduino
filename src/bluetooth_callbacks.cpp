@@ -26,7 +26,7 @@ namespace hardware {
 
         std::string value = pCharacteristic->getValue();
         size_t size = value.length();
-        if (size < 2 || size > BLE_WRITE_SIZE) {
+        if (size < 2 || size > sizeof(net_frame_t)) {
             log_w("Receive data size is outside");
             return;
         }

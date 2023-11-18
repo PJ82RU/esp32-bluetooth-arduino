@@ -7,8 +7,6 @@
 #include "bluetooth_callbacks.h"
 #include "callback.h"
 
-#define BLE_BUFFER_SIZE     16      // 16 * sizeof(net_frame_t)
-
 namespace hardware {
     class BluetoothLowEnergy {
     public:
@@ -22,8 +20,11 @@ namespace hardware {
         /** Функция обратного вызова входящих данных */
         tools::Callback callback;
 
-        /** Bluetooth Low Energy */
-        BluetoothLowEnergy();
+        /**
+         * Bluetooth Low Energy
+         * @param num Количество элементов net_frame_t в буфере
+         */
+        BluetoothLowEnergy(uint8_t num);
 
         ~BluetoothLowEnergy();
 

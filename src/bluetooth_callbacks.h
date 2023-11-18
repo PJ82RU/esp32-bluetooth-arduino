@@ -5,9 +5,7 @@
 #include <BLEUtils.h>
 #include "callback.h"
 
-#define BLE_WRITE_SIZE          512
 #define BLE_FRAME_DATA_SIZE     509
-#define BLE_HEADER_SIZE         3
 
 namespace hardware {
 
@@ -19,7 +17,7 @@ namespace hardware {
             uint16_t size;                          // Размер данных
             uint8_t data[BLE_FRAME_DATA_SIZE];      // Данные
         } value;
-        uint8_t bytes[BLE_WRITE_SIZE];
+        uint8_t bytes[3 + BLE_FRAME_DATA_SIZE];
     } net_frame_t;
 #pragma pack(pop)
 

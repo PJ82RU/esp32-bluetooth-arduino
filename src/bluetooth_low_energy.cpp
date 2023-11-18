@@ -8,7 +8,7 @@ namespace hardware {
         ble->characteristic_set_value(*frame);
     }
 
-    BluetoothLowEnergy::BluetoothLowEnergy() : callback(BLE_BUFFER_SIZE, sizeof(net_frame_t), "BLE_CALLBACK", 2048) {
+    BluetoothLowEnergy::BluetoothLowEnergy(uint8_t num) : callback(num, sizeof(net_frame_t), "BLE_CALLBACK", 2048) {
         callback.cb_receive = on_response;
         callback.p_receive_parameters = this;
     }
@@ -107,7 +107,7 @@ namespace hardware {
     void BluetoothLowEnergy::characteristic_set_value(net_frame_t &frame) {
         log_d("Send data: id: 0x%02x, size: %zu", frame.value.id, frame.value.size);
 
-        ble_characteristic->setValue(frame.bytes, frame.value.size + BLE_HEADER_SIZE);
+        ble_characteristic->setValue(frame.bytes, frame.value.size + 3);
         ble_characteristic->notify();
         // защита от перегруза стека bluetooth
         delay(5);
