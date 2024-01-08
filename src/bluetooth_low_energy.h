@@ -25,7 +25,7 @@ namespace hardware {
          * @param num         Количество net_frame_t в буфере
          * @param stack_depth Глубина стека
          */
-        BluetoothLowEnergy(uint8_t num = 16, uint32_t stack_depth = 2048);
+        BluetoothLowEnergy(uint8_t num = 16, uint32_t stack_depth = 4096);
 
         ~BluetoothLowEnergy();
 
