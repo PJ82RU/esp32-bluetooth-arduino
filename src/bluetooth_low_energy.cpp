@@ -10,8 +10,7 @@ namespace hardware {
 
     BluetoothLowEnergy::BluetoothLowEnergy(uint8_t num, uint32_t stack_depth) :
             callback(num, sizeof(net_frame_t), "BLE_CALLBACK", stack_depth) {
-        callback.cb_receive = on_response;
-        callback.p_receive_parameters = this;
+        callback.set_callback_receive(on_response, this);
     }
 
     BluetoothLowEnergy::~BluetoothLowEnergy() {
