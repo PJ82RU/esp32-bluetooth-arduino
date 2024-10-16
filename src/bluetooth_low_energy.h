@@ -12,7 +12,7 @@ namespace hardware {
     public:
         /**
          * Ответ на запрос
-         * @param p_value      Значение
+         * @param p_value Значение
          * @param p_parameters Параметры
          */
         static void on_response(void *p_value, void *p_parameters);
@@ -22,7 +22,7 @@ namespace hardware {
 
         /**
          * Bluetooth Low Energy
-         * @param num         Количество net_frame_t в буфере
+         * @param num Количество net_frame_t в буфере
          * @param stack_depth Глубина стека
          */
         BluetoothLowEnergy(uint8_t num = 16, uint32_t stack_depth = 4096);
@@ -31,8 +31,8 @@ namespace hardware {
 
         /**
          * Запустить BLE сервер
-         * @param name                Имя устройства
-         * @param service_uuid        UUID службы
+         * @param name Имя устройства
+         * @param service_uuid UUID службы
          * @param characteristic_uuid UUID характеристики
          * @return Результат выполнения
          */
@@ -57,7 +57,7 @@ namespace hardware {
 
         /**
          * Отправка данных по Bluetooth
-         * @param id   ID функции
+         * @param id ID функции
          * @param data Массив данных
          * @param size Размер массива данных
          * @return Результат выполнения
@@ -66,9 +66,9 @@ namespace hardware {
 
         /**
          * Входящие данные по Bluetooth
-         * @param id    ID функции
-         * @param data  Массив данных
-         * @param size  Размер массива
+         * @param id ID функции
+         * @param data Массив данных
+         * @param size Размер массива
          * @return Размер данных
          */
         size_t receive(uint8_t &id, uint8_t *data, size_t size);
