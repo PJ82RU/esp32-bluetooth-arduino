@@ -3,10 +3,11 @@
 
 namespace hardware {
     void BluetoothLowEnergy::on_response(void *p_value, void *p_parameters) {
-        if (!p_value || !p_parameters) return;
-        auto *frame = (net_frame_t *) p_value;
-        auto *ble = (BluetoothLowEnergy *) p_parameters;
-        ble->characteristic_set_value(*frame);
+        if (p_value && p_parameters) {
+            auto *frame = (net_frame_t *) p_value;
+            auto *ble = (BluetoothLowEnergy *) p_parameters;
+            ble->characteristic_set_value(*frame);
+        }
     }
 
     BluetoothLowEnergy::BluetoothLowEnergy(uint8_t num, uint32_t stack_depth) :
