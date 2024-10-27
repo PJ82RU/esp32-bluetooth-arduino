@@ -11,7 +11,8 @@ namespace hardware {
     }
 
     BluetoothLowEnergy::BluetoothLowEnergy(uint8_t num, uint32_t stack_depth) :
-            callback(num, sizeof(net_frame_t), "CALLBACK_BLE", stack_depth) {
+            callback(num, sizeof(net_frame_t), "CALLBACK_BLE", stack_depth),
+            semaphore(false) {
         callback.parent_callback.set(on_response, this);
     }
 
