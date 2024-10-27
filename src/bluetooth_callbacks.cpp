@@ -19,22 +19,19 @@ namespace hardware {
     }
 
     void BluetoothCharacteristicCallbacks::onWrite(BLECharacteristic *pCharacteristic) {
-        if (!pCharacteristic) {
+        if (pCharacteristic) {
+            std::string value = pCharacteristic->getValue();
+            size_t size = value.length();
+            if (size > 1 & size <= sizeof(net_frame_t)) {
+                net_frame_t frame;
+                memcpy(frame.bytes, value.c_str(), size);
+                callback->call(&frame);
+                log_d("Receive data. Size: %zu", size);
+            } else {
+                log_w("Receive data size is outside");
+            }
+        } else {
             log_w("Characteristic not found");
-            return;
         }
-
-        std::string value = pCharacteristic->getValue();
-        size_t size = value.length();
-        if (size < 2 || size > sizeof(net_frame_t)) {
-            log_w("Receive data size is outside");
-            return;
-        }
-
-        net_frame_t frame{};
-        memcpy(frame.bytes, value.c_str(), size);
-        callback->call(&frame);
-
-        log_d("Receive data. Size: %zu", size);
     }
 }

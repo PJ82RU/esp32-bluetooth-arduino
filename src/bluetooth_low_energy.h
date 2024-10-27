@@ -6,6 +6,7 @@
 #include <BLE2902.h>
 #include "bluetooth_callbacks.h"
 #include "callback.h"
+#include "semaphore.h"
 
 namespace hardware {
     class BluetoothLowEnergy {
@@ -26,7 +27,6 @@ namespace hardware {
          * @param stack_depth Глубина стека
          */
         BluetoothLowEnergy(uint8_t num = 16, uint32_t stack_depth = 4096);
-
         ~BluetoothLowEnergy();
 
         /**
@@ -86,6 +86,8 @@ namespace hardware {
         BLECharacteristic *ble_characteristic = nullptr;
         BluetoothServerCallbacks *ble_server_callbacks = nullptr;
         BluetoothCharacteristicCallbacks *ble_characteristic_callback = nullptr;
+
+        tools::Semaphore semaphore;
     };
 }
 
