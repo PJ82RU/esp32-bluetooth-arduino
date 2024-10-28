@@ -119,14 +119,9 @@ namespace hardware {
     }
 
     void BluetoothLowEnergy::characteristic_set_value(net_frame_t &frame) {
-        // защита от перегруза стека bluetooth
-        semaphore.wait_time();
-
         log_d("Send data: id: 0x%02x, size: %zu", frame.value.id, frame.value.size);
         ble_characteristic->setValue(frame.bytes, frame.value.size + 3);
         ble_characteristic->notify();
-
-        semaphore.set_wait_time(5);
     }
 
     bool BluetoothLowEnergy::send(uint8_t id, const uint8_t *data, size_t size) {
