@@ -8,15 +8,17 @@
 #include "callback.h"
 #include "semaphore.h"
 
-namespace hardware {
-    class BluetoothLowEnergy {
+namespace hardware
+{
+    class BluetoothLowEnergy
+    {
     public:
         /**
          * Ответ на запрос
          * @param p_value Значение
          * @param p_parameters Параметры
          */
-        static void on_response(void *p_value, void *p_parameters);
+        static void on_response(void* p_value, void* p_parameters);
 
         /** Функция обратного вызова входящих данных */
         tools::Callback callback;
@@ -26,7 +28,7 @@ namespace hardware {
          * @param num Количество net_frame_t в буфере
          * @param stack_depth Глубина стека
          */
-        BluetoothLowEnergy(uint8_t num = 16, uint32_t stack_depth = 4096);
+        explicit BluetoothLowEnergy(uint8_t num = 16, uint32_t stack_depth = 4096);
         ~BluetoothLowEnergy();
 
         /**
@@ -36,24 +38,24 @@ namespace hardware {
          * @param characteristic_uuid UUID характеристики
          * @return Результат выполнения
          */
-        bool begin(const char *name, const char *service_uuid, const char *characteristic_uuid);
+        bool begin(const char* name, const char* service_uuid, const char* characteristic_uuid);
 
         /** Остановить BLE сервер */
         void end();
 
 
         /** Сервер */
-        BLEServer *server();
+        BLEServer* server() const;
         /** Сервис */
-        BLEService *service();
+        BLEService* service() const;
         /** Характеристика */
-        BLECharacteristic *characteristic();
+        BLECharacteristic* characteristic() const;
 
         /**
          * Статус подключения устройства
          * @return Количество подключений
          */
-        uint8_t device_connected();
+        uint8_t device_connected() const;
 
         /**
          * Отправка данных по Bluetooth
@@ -62,7 +64,7 @@ namespace hardware {
          * @param size Размер массива данных
          * @return Результат выполнения
          */
-        bool send(uint8_t id, const uint8_t *data, size_t size);
+        bool send(uint8_t id, const uint8_t* data, size_t size);
 
         /**
          * Входящие данные по Bluetooth
@@ -71,21 +73,21 @@ namespace hardware {
          * @param size Размер массива
          * @return Размер данных
          */
-        size_t receive(uint8_t &id, uint8_t *data, size_t size);
+        size_t receive(uint8_t& id, uint8_t* data, size_t size);
 
     protected:
         /**
          * Записать значение характеристики
          * @param frame Кадр данных
          */
-        void characteristic_set_value(net_frame_t &frame);
+        void characteristic_set_value(net_frame_t& frame) const;
 
     private:
-        BLEServer *ble_server = nullptr;
-        BLEService *ble_service = nullptr;
-        BLECharacteristic *ble_characteristic = nullptr;
-        BluetoothServerCallbacks *ble_server_callbacks = nullptr;
-        BluetoothCharacteristicCallbacks *ble_characteristic_callback = nullptr;
+        BLEServer* ble_server = nullptr;
+        BLEService* ble_service = nullptr;
+        BLECharacteristic* ble_characteristic = nullptr;
+        BluetoothServerCallbacks* ble_server_callbacks = nullptr;
+        BluetoothCharacteristicCallbacks* ble_characteristic_callback = nullptr;
 
         tools::Semaphore semaphore;
     };
