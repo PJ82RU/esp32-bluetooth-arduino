@@ -1,48 +1,55 @@
 #include "bluetooth_callbacks.h"
-#include "esp32-hal-log.h"
+#include <esp_log.h>
 
 namespace hardware
 {
-    void BluetoothServerCallbacks::onConnect(BLEServer* pServer)
+    void BluetoothServerCallbacks::onConnect(BLEServer* server)
     {
-        device_connected++;
-        log_i("Device connected");
+        if (server)
+        {
+            connected_devices++;
+            ESP_LOGI("BLE", "Device connected. Count: %d", connected_devices);
+        }
     }
 
-    void BluetoothServerCallbacks::onDisconnect(BLEServer* pServer)
+    void BluetoothServerCallbacks::onDisconnect(BLEServer* server)
     {
-        device_connected--;
-        log_i("Device disconnected");
+        if (!server) return;
 
-        if (device_connected == 0 && pServer)
+        connected_devices = (connected_devices > 0) ? connected_devices - 1 : 0;
+        ESP_LOGI("BLE", "Device disconnected. Count: %d", connected_devices);
+
+        if (connected_devices == 0)
         {
-            // время на подготовку стека bluetooth
+            // Краткая пауза перед перезапуском рекламы
             delay(500);
-            pServer->startAdvertising();
+            server->startAdvertising();
+            ESP_LOGI("BLE", "Restarted advertising");
         }
     }
 
-    void BluetoothCharacteristicCallbacks::onWrite(BLECharacteristic* pCharacteristic)
+    void BluetoothCharacteristicCallbacks::onWrite(BLECharacteristic* characteristic)
     {
-        if (pCharacteristic)
+        if (!characteristic || !callback)
         {
-            const std::string value = pCharacteristic->getValue();
-            const size_t size = value.length();
-            if (size > 1 & size <= sizeof(net_frame_t))
-            {
-                net_frame_t frame;
-                memcpy(frame.bytes, value.c_str(), size);
-                callback->call(&frame);
-                log_d("Receive data. Size: %zu", size);
-            }
-            else
-            {
-                log_w("Receive data size is outside");
-            }
+            ESP_LOGW("BLE", "Invalid characteristic or callback");
+            return;
         }
-        else
+
+        const std::string& value = characteristic->getValue();
+        const size_t size = value.size();
+
+        if (size == 0 || size > BLE_PACKET_DATA_SIZE)
         {
-            log_w("Characteristic not found");
+            ESP_LOGW("BLE", "Invalid data size: %zu (max %zu)", size, BLE_PACKET_DATA_SIZE);
+            return;
         }
+
+        Packet packet{};
+        packet.size = static_cast<uint16_t>(size);
+        std::memcpy(packet.data, value.data(), size);
+
+        callback->trigger(&packet);
+        ESP_LOGD("BLE", "Received data: %zu bytes", size);
     }
 }

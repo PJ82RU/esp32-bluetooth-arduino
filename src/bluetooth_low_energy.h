@@ -1,96 +1,115 @@
 #ifndef BACKEND_BLUETOOTH_H
 #define BACKEND_BLUETOOTH_H
 
-#include <BLEDevice.h>
-#include <BLEServer.h>
-#include <BLE2902.h>
-#include "bluetooth_callbacks.h"
 #include "callback.h"
 #include "semaphore.h"
+#include "bluetooth_callbacks.h"
 
 namespace hardware
 {
+    /**
+     * @brief Класс для работы с Bluetooth Low Energy (BLE)
+     * 
+     * Предоставляет высокоуровневый интерфейс для создания BLE-сервера,
+     * управления подключениями и обмена данными через BLE характеристики.
+     */
     class BluetoothLowEnergy
     {
     public:
         /**
-         * Ответ на запрос
-         * @param p_value Значение
-         * @param p_parameters Параметры
+         * @brief Статический метод обработки ответа
+         * @param value Указатель на данные для отправки
+         * @param params Указатель на объект BluetoothLowEnergy
          */
-        static void on_response(void* p_value, void* p_parameters);
-
-        /** Функция обратного вызова входящих данных */
-        tools::Callback callback;
+        static void on_response(void* value, void* params) noexcept;
 
         /**
-         * Bluetooth Low Energy
-         * @param num Количество net_frame_t в буфере
-         * @param stack_depth Глубина стека
+         * @brief Конструктор BLE сервера
+         * @param num_packets Количество пакетов в буфере callback (по умолчанию 16)
+         * @param stack_depth Глубина стека для задачи callback (по умолчанию 4096)
          */
-        explicit BluetoothLowEnergy(uint8_t num = 16, uint32_t stack_depth = 4096);
+        explicit BluetoothLowEnergy(uint8_t num_packets = 16, uint32_t stack_depth = 4096) noexcept;
+
+        /**
+         * @brief Деструктор (останавливает сервер и освобождает ресурсы)
+         */
         ~BluetoothLowEnergy();
 
-        /**
-         * Запустить BLE сервер
-         * @param name Имя устройства
-         * @param service_uuid UUID службы
-         * @param characteristic_uuid UUID характеристики
-         * @return Результат выполнения
-         */
-        bool begin(const char* name, const char* service_uuid, const char* characteristic_uuid);
-
-        /** Остановить BLE сервер */
-        void end();
-
-
-        /** Сервер */
-        BLEServer* server() const;
-        /** Сервис */
-        BLEService* service() const;
-        /** Характеристика */
-        BLECharacteristic* characteristic() const;
+        // Запрещаем копирование
+        BluetoothLowEnergy(const BluetoothLowEnergy&) = delete;
+        BluetoothLowEnergy& operator=(const BluetoothLowEnergy&) = delete;
 
         /**
-         * Статус подключения устройства
-         * @return Количество подключений
+         * @brief Инициализация и запуск BLE сервера
+         * @param name Имя BLE устройства
+         * @param service_uuid UUID сервиса в формате строки
+         * @param characteristic_uuid UUID характеристики в формате строки
+         * @return true в случае успешной инициализации, false при ошибке
          */
-        uint8_t device_connected() const;
+        [[nodiscard]] bool begin(const char* name, const char* service_uuid, const char* characteristic_uuid) noexcept;
 
         /**
-         * Отправка данных по Bluetooth
-         * @param id ID функции
-         * @param data Массив данных
-         * @param size Размер массива данных
-         * @return Результат выполнения
+         * @brief Остановка BLE сервера и освобождение ресурсов
          */
-        bool send(uint8_t id, const uint8_t* data, size_t size);
+        void end() noexcept;
+
+        // Геттеры
+        /**
+         * @brief Получить указатель на BLE сервер
+         */
+        [[nodiscard]] BLEServer* server() const noexcept;
 
         /**
-         * Входящие данные по Bluetooth
-         * @param id ID функции
-         * @param data Массив данных
-         * @param size Размер массива
-         * @return Размер данных
+         * @brief Получить указатель на BLE сервис
          */
-        size_t receive(uint8_t& id, uint8_t* data, size_t size);
+        [[nodiscard]] BLEService* service() const noexcept;
 
-    protected:
         /**
-         * Записать значение характеристики
-         * @param frame Кадр данных
+         * @brief Получить указатель на BLE характеристику
          */
-        void characteristic_set_value(net_frame_t& frame) const;
+        [[nodiscard]] BLECharacteristic* characteristic() const noexcept;
+
+        /**
+         * @brief Получить количество подключенных устройств
+         */
+        [[nodiscard]] uint8_t device_connected() const noexcept;
+
+        // Операции с данными
+        /**
+         * @brief Отправить данные через BLE характеристику
+         * @param packet Структура с данными для отправки
+         * @return true если данные успешно отправлены
+         */
+        [[nodiscard]] bool send(Packet& packet) const noexcept;
+
+        /**
+         * @brief Получить данные из BLE характеристики
+         * @param packet Структура для записи полученных данных
+         * @return true если данные успешно получены
+         */
+        [[nodiscard]] bool receive(Packet& packet) const noexcept;
 
     private:
-        BLEServer* ble_server = nullptr;
-        BLEService* ble_service = nullptr;
-        BLECharacteristic* ble_characteristic = nullptr;
-        BluetoothServerCallbacks* ble_server_callbacks = nullptr;
-        BluetoothCharacteristicCallbacks* ble_characteristic_callback = nullptr;
+        /**
+         * @brief Установка значения характеристики и отправка уведомления
+         * @param packet Структура с данными для отправки
+         */
+        void characteristic_set_value(Packet& packet) const noexcept;
 
-        tools::Semaphore semaphore;
+        /**
+         * @brief Освобождение ресурсов и очистка указателей
+         */
+        void cleanup_resources() noexcept;
+
+        tools::Callback callback_; ///< Механизм callback для обработки входящих данных
+        tools::Semaphore semaphore_; ///< Семафор для синхронизации доступа
+
+        BLEServer* server_ = nullptr; ///< Указатель на BLE сервер
+        BLEService* service_ = nullptr; ///< Указатель на BLE сервис
+        BLECharacteristic* characteristic_ = nullptr; ///< Указатель на BLE характеристику
+        BluetoothServerCallbacks* server_callbacks_ = nullptr; ///< Callback для событий сервера
+        BluetoothCharacteristicCallbacks* char_callbacks_ = nullptr; ///< Callback для событий характеристики
     };
 }
 
-#endif //BACKEND_BLUETOOTH_H
+#endif // BACKEND_BLUETOOTH_H
