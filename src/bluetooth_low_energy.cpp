@@ -14,11 +14,9 @@ namespace hardware
         }
     }
 
-    BluetoothLowEnergy::BluetoothLowEnergy(const uint8_t num_packets, const uint32_t stack_depth) noexcept
-        : callback_(num_packets, sizeof(Packet), "CALLBACK_BLE", stack_depth),
-          semaphore_(false)
+    BluetoothLowEnergy::BluetoothLowEnergy() noexcept
+        : semaphore_(false)
     {
-        callback_.parent_callback.set(on_response, this);
     }
 
     BluetoothLowEnergy::~BluetoothLowEnergy()
@@ -26,7 +24,8 @@ namespace hardware
         end();
     }
 
-    bool BluetoothLowEnergy::begin(const char* name, const char* service_uuid, const char* characteristic_uuid) noexcept
+    bool BluetoothLowEnergy::begin(const char* name, const char* service_uuid, const char* characteristic_uuid,
+                                   tools::Callback* callback) noexcept
     {
         if (!name || !service_uuid || !characteristic_uuid)
         {
@@ -105,7 +104,7 @@ namespace hardware
                 break;
             }
 
-            char_callbacks_->callback = &callback_;
+            char_callbacks_->callback = callback;
             characteristic_->setCallbacks(char_callbacks_);
             ESP_LOGI("BLE", "Descriptor added");
 
@@ -234,7 +233,7 @@ namespace hardware
             return false;
         }
 
-        if (!callback_.read_data(&packet) || packet.size == 0)
+        if (!char_callbacks_->callback->read(&packet) || packet.size == 0)
         {
             ESP_LOGW("BLE", "No data received");
             return false;

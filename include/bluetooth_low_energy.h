@@ -25,10 +25,8 @@ namespace hardware
 
         /**
          * @brief Конструктор BLE сервера
-         * @param num_packets Количество пакетов в буфере callback (по умолчанию 16)
-         * @param stack_depth Глубина стека для задачи callback (по умолчанию 4096)
          */
-        explicit BluetoothLowEnergy(uint8_t num_packets = 16, uint32_t stack_depth = 4096) noexcept;
+        explicit BluetoothLowEnergy() noexcept;
 
         /**
          * @brief Деструктор (останавливает сервер и освобождает ресурсы)
@@ -44,9 +42,11 @@ namespace hardware
          * @param name Имя BLE устройства
          * @param service_uuid UUID сервиса в формате строки
          * @param characteristic_uuid UUID характеристики в формате строки
+         * @param callback Механизм callback для обработки входящих данных
          * @return true в случае успешной инициализации, false при ошибке
          */
-        [[nodiscard]] bool begin(const char* name, const char* service_uuid, const char* characteristic_uuid) noexcept;
+        [[nodiscard]] bool begin(const char* name, const char* service_uuid, const char* characteristic_uuid,
+                                 tools::Callback* callback) noexcept;
 
         /**
          * @brief Остановка BLE сервера и освобождение ресурсов
@@ -101,7 +101,6 @@ namespace hardware
          */
         void cleanup_resources() noexcept;
 
-        tools::Callback callback_; ///< Механизм callback для обработки входящих данных
         tools::Semaphore semaphore_; ///< Семафор для синхронизации доступа
 
         BLEServer* server_ = nullptr; ///< Указатель на BLE сервер

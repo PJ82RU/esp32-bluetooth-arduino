@@ -39,7 +39,7 @@ namespace hardware
         const std::string& value = characteristic->getValue();
         const size_t size = value.size();
 
-        if (size == 0 || size > BLE_PACKET_DATA_SIZE)
+        if (size == 0 || size > PACKET_DATA_SIZE)
         {
             ESP_LOGW("BLE", "Invalid data size: %zu (max %zu)", size, BLE_PACKET_DATA_SIZE);
             return;
@@ -49,7 +49,7 @@ namespace hardware
         packet.size = static_cast<uint16_t>(size);
         std::memcpy(packet.data, value.data(), size);
 
-        callback->trigger(&packet);
+        callback->invoke(&packet);
         ESP_LOGD("BLE", "Received data: %zu bytes", size);
     }
 }
