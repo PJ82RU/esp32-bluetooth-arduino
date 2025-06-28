@@ -1,4 +1,5 @@
 #include "bluetooth_callbacks.h"
+#include <cstring>
 #include <esp_log.h>
 
 namespace hardware
