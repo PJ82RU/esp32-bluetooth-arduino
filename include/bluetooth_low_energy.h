@@ -45,7 +45,9 @@ namespace hardware
          * @param callback Механизм callback для обработки входящих данных
          * @return true в случае успешной инициализации, false при ошибке
          */
-        [[nodiscard]] bool begin(const char* name, const char* service_uuid, const char* characteristic_uuid,
+        [[nodiscard]] bool begin(const char* name,
+                                 const char* service_uuid,
+                                 const char* characteristic_uuid,
                                  tools::Callback* callback) noexcept;
 
         /**
