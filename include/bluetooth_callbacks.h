@@ -1,5 +1,5 @@
-#ifndef ESP32_BLE_ARDUINO_BLE_CALLBACKS_H
-#define ESP32_BLE_ARDUINO_BLE_CALLBACKS_H
+#ifndef HARDWARE_BLE_CALLBACKS_H
+#define HARDWARE_BLE_CALLBACKS_H
 
 #include <Arduino.h>
 #include <BLEUtils.h>
@@ -8,10 +8,12 @@
 
 namespace hardware
 {
-    /// @brief Класс обработчиков событий сервера BLE
-    ///
-    /// Реализует логику отслеживания подключений/отключений устройств
-    /// Наследует стандартные колбэки BLEServerCallbacks от ESP32 BLE
+    /**
+     * @brief Класс обработчиков событий сервера BLE
+     *
+     * @details Реализует логику отслеживания подключений/отключений устройств.
+     * Наследует стандартные колбэки BLEServerCallbacks от ESP32 BLE.
+     */
     class BluetoothServerCallbacks final : public BLEServerCallbacks
     {
     public:
@@ -20,7 +22,7 @@ namespace hardware
          * @note Атомарный доступ не требуется, так как все вызовы BLE
          *       обрабатываются в контексте одного потока (BLE task)
          */
-        uint8_t connected_devices = 0;
+        uint8_t connectedDevices = 0;
 
         /**
          * @brief Обработчик подключения нового устройства
@@ -35,15 +37,17 @@ namespace hardware
         void onDisconnect(BLEServer* server) override;
     };
 
-    /// @brief Класс обработчиков событий характеристик BLE
-    ///
-    /// Обрабатывает запись данных в характеристику и перенаправляет
-    /// в зарегистрированный callback
+    /**
+     * @brief Класс обработчиков событий характеристик BLE
+     *
+     * @details Обрабатывает запись данных в характеристику и перенаправляет
+     * в зарегистрированный callback.
+     */
     class BluetoothCharacteristicCallbacks final : public BLECharacteristicCallbacks
     {
     public:
         /// @brief Указатель на callback-функцию для обработки записей
-        tools::Callback* callback = nullptr;
+        pj_tools::Callback* callback = nullptr;
 
         /**
          * @brief Обработчик записи данных в характеристику
@@ -51,6 +55,6 @@ namespace hardware
          */
         void onWrite(BLECharacteristic* characteristic) override;
     };
-}
+} // namespace hardware
 
-#endif // ESP32_BLE_ARDUINO_BLE_CALLBACKS_H
+#endif // HARDWARE_BLE_CALLBACKS_H

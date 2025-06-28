@@ -1,5 +1,5 @@
-#ifndef BACKEND_BLUETOOTH_H
-#define BACKEND_BLUETOOTH_H
+#ifndef HARDWARE_BLE_H
+#define HARDWARE_BLE_H
 
 #include "callback.h"
 #include "semaphore.h"
@@ -9,8 +9,8 @@ namespace hardware
 {
     /**
      * @brief Класс для работы с Bluetooth Low Energy (BLE)
-     * 
-     * Предоставляет высокоуровневый интерфейс для создания BLE-сервера,
+     *
+     * @details Предоставляет высокоуровневый интерфейс для создания BLE-сервера,
      * управления подключениями и обмена данными через BLE характеристики.
      */
     class BluetoothLowEnergy
@@ -21,7 +21,7 @@ namespace hardware
          * @param value Указатель на данные для отправки
          * @param params Указатель на объект BluetoothLowEnergy
          */
-        static void on_response(void* value, void* params) noexcept;
+        static void onResponse(void* value, void* params) noexcept;
 
         /**
          * @brief Конструктор BLE сервера
@@ -40,15 +40,15 @@ namespace hardware
         /**
          * @brief Инициализация и запуск BLE сервера
          * @param name Имя BLE устройства
-         * @param service_uuid UUID сервиса в формате строки
-         * @param characteristic_uuid UUID характеристики в формате строки
+         * @param serviceUuid UUID сервиса в формате строки
+         * @param characteristicUuid UUID характеристики в формате строки
          * @param callback Механизм callback для обработки входящих данных
          * @return true в случае успешной инициализации, false при ошибке
          */
         [[nodiscard]] bool begin(const char* name,
-                                 const char* service_uuid,
-                                 const char* characteristic_uuid,
-                                 tools::Callback* callback) noexcept;
+                                 const char* serviceUuid,
+                                 const char* characteristicUuid,
+                                 pj_tools::Callback* callback) noexcept;
 
         /**
          * @brief Остановка BLE сервера и освобождение ресурсов
@@ -74,7 +74,7 @@ namespace hardware
         /**
          * @brief Получить количество подключенных устройств
          */
-        [[nodiscard]] uint8_t device_connected() const noexcept;
+        [[nodiscard]] uint8_t deviceConnected() const noexcept;
 
         // Операции с данными
         /**
@@ -96,21 +96,31 @@ namespace hardware
          * @brief Установка значения характеристики и отправка уведомления
          * @param packet Структура с данными для отправки
          */
-        void characteristic_set_value(Packet& packet) const noexcept;
+        void characteristicSetValue(Packet& packet) const noexcept;
 
         /**
          * @brief Освобождение ресурсов и очистка указателей
          */
-        void cleanup_resources() noexcept;
+        void cleanupResources() noexcept;
 
-        tools::Semaphore semaphore_; ///< Семафор для синхронизации доступа
+        /// Семафор для синхронизации доступа
+        pj_tools::Semaphore mSemaphore;
 
-        BLEServer* server_ = nullptr; ///< Указатель на BLE сервер
-        BLEService* service_ = nullptr; ///< Указатель на BLE сервис
-        BLECharacteristic* characteristic_ = nullptr; ///< Указатель на BLE характеристику
-        BluetoothServerCallbacks* server_callbacks_ = nullptr; ///< Callback для событий сервера
-        BluetoothCharacteristicCallbacks* char_callbacks_ = nullptr; ///< Callback для событий характеристики
+        /// Указатель на BLE сервер
+        BLEServer* mServer = nullptr;
+
+        /// Указатель на BLE сервис
+        BLEService* mService = nullptr;
+
+        /// Указатель на BLE характеристику
+        BLECharacteristic* mCharacteristic = nullptr;
+
+        /// Callback для событий сервера
+        BluetoothServerCallbacks* mServerCallbacks = nullptr;
+
+        /// Callback для событий характеристики
+        BluetoothCharacteristicCallbacks* mCharCallbacks = nullptr;
     };
-}
+} // namespace hardware
 
-#endif // BACKEND_BLUETOOTH_H
+#endif // HARDWARE_BLE_H

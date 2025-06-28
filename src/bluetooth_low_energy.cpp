@@ -4,18 +4,18 @@
 
 namespace hardware
 {
-    void BluetoothLowEnergy::on_response(void* value, void* params) noexcept
+    void BluetoothLowEnergy::onResponse(void* value, void* params) noexcept
     {
         if (value && params)
         {
             const auto* ble = static_cast<BluetoothLowEnergy*>(params);
             auto* packet = static_cast<Packet*>(value);
-            ble->characteristic_set_value(*packet);
+            ble->characteristicSetValue(*packet);
         }
     }
 
     BluetoothLowEnergy::BluetoothLowEnergy() noexcept
-        : semaphore_(false)
+        : mSemaphore(false)
     {
     }
 
@@ -24,220 +24,222 @@ namespace hardware
         end();
     }
 
-    bool BluetoothLowEnergy::begin(const char* name, const char* service_uuid, const char* characteristic_uuid,
-                                   tools::Callback* callback) noexcept
+    bool BluetoothLowEnergy::begin(const char* name,
+                                   const char* serviceUuid,
+                                   const char* characteristicUuid,
+                                   pj_tools::Callback* callback) noexcept
     {
-        if (!name || !service_uuid || !characteristic_uuid)
+        if (!name || !serviceUuid || !characteristicUuid)
         {
-            ESP_LOGE("BLE", "Invalid parameters");
+            log_e("Invalid parameters");
             return false;
         }
 
-        if (!semaphore_.take()) return false;
+        if (!mSemaphore.take()) return false;
 
         bool result = false;
         do
         {
-            if (server_)
+            if (mServer)
             {
-                ESP_LOGW("BLE", "Server already running");
+                log_w("Server already running");
                 break;
             }
 
             // Инициализация устройства
             BLEDevice::init(name);
-            ESP_LOGI("BLE", "Device initialized: %s", name);
+            log_i("Device initialized: %s", name);
 
             // Создание сервера
-            server_ = BLEDevice::createServer();
-            if (!server_)
+            mServer = BLEDevice::createServer();
+            if (!mServer)
             {
-                ESP_LOGE("BLE", "Server creation failed");
+                log_e("Server creation failed");
                 BLEDevice::deinit(true);
                 break;
             }
 
-            server_callbacks_ = new(std::nothrow) BluetoothServerCallbacks();
-            if (!server_callbacks_)
+            mServerCallbacks = new(std::nothrow) BluetoothServerCallbacks();
+            if (!mServerCallbacks)
             {
-                ESP_LOGE("BLE", "Failed to allocate server callbacks");
-                cleanup_resources();
+                log_e("Failed to allocate server callbacks");
+                cleanupResources();
                 break;
             }
 
-            server_->setCallbacks(server_callbacks_);
-            ESP_LOGI("BLE", "Server created");
+            mServer->setCallbacks(mServerCallbacks);
+            log_i("Server created");
 
             // Создание сервиса
-            service_ = server_->createService(service_uuid);
-            if (!service_)
+            mService = mServer->createService(serviceUuid);
+            if (!mService)
             {
-                ESP_LOGE("BLE", "Service creation failed");
-                cleanup_resources();
+                log_e("Service creation failed");
+                cleanupResources();
                 break;
             }
-            ESP_LOGI("BLE", "Service created: %s", service_uuid);
+            log_i("Service created: %s", serviceUuid);
 
             // Создание характеристики
-            characteristic_ = service_->createCharacteristic(
-                characteristic_uuid,
+            mCharacteristic = mService->createCharacteristic(
+                characteristicUuid,
                 BLECharacteristic::PROPERTY_READ |
                 BLECharacteristic::PROPERTY_WRITE |
                 BLECharacteristic::PROPERTY_NOTIFY |
                 BLECharacteristic::PROPERTY_INDICATE);
 
-            if (!characteristic_)
+            if (!mCharacteristic)
             {
-                ESP_LOGE("BLE", "Characteristic creation failed");
-                cleanup_resources();
+                log_e("Characteristic creation failed");
+                cleanupResources();
                 break;
             }
-            ESP_LOGI("BLE", "Characteristic created: %s", characteristic_uuid);
+            log_i("Characteristic created: %s", characteristicUuid);
 
             // Настройка дескриптора
-            characteristic_->addDescriptor(new(std::nothrow) BLE2902());
-            char_callbacks_ = new(std::nothrow) BluetoothCharacteristicCallbacks();
-            if (!char_callbacks_)
+            mCharacteristic->addDescriptor(new(std::nothrow) BLE2902());
+            mCharCallbacks = new(std::nothrow) BluetoothCharacteristicCallbacks();
+            if (!mCharCallbacks)
             {
-                ESP_LOGE("BLE", "Failed to allocate char callbacks");
-                cleanup_resources();
+                log_e("Failed to allocate char callbacks");
+                cleanupResources();
                 break;
             }
 
-            char_callbacks_->callback = callback;
-            characteristic_->setCallbacks(char_callbacks_);
-            ESP_LOGI("BLE", "Descriptor added");
+            mCharCallbacks->callback = callback;
+            mCharacteristic->setCallbacks(mCharCallbacks);
+            log_i("Descriptor added");
 
             // Запуск сервиса
-            service_->start();
-            ESP_LOGI("BLE", "Service started");
+            mService->start();
+            log_i("Service started");
 
             // Настройка и запуск рекламы
             BLEAdvertising* advertising = BLEDevice::getAdvertising();
             if (!advertising)
             {
-                ESP_LOGE("BLE", "Failed to get advertising");
-                cleanup_resources();
+                log_e("Failed to get advertising");
+                cleanupResources();
                 break;
             }
 
-            advertising->addServiceUUID(service_uuid);
+            advertising->addServiceUUID(serviceUuid);
             advertising->setScanResponse(false);
             advertising->setMinPreferred(0x0);
             BLEDevice::startAdvertising();
 
             result = true;
-            ESP_LOGI("BLE", "Advertising started");
+            log_i("Advertising started");
         }
         while (false);
 
-        (void)semaphore_.give();
+        (void)mSemaphore.give();
         return result;
     }
 
     void BluetoothLowEnergy::end() noexcept
     {
-        if (!semaphore_.take()) return;
+        if (!mSemaphore.take()) return;
 
-        if (server_)
+        if (mServer)
         {
             BLEDevice::stopAdvertising();
-            if (service_)
+            if (mService)
             {
-                service_->stop();
+                mService->stop();
             }
             BLEDevice::deinit(true);
-            cleanup_resources();
-            ESP_LOGI("BLE", "Server stopped");
+            cleanupResources();
+            log_i("Server stopped");
         }
 
-        (void)semaphore_.give();
+        (void)mSemaphore.give();
     }
 
-    void BluetoothLowEnergy::cleanup_resources() noexcept
+    void BluetoothLowEnergy::cleanupResources() noexcept
     {
-        delete server_callbacks_;
-        server_callbacks_ = nullptr;
+        delete mServerCallbacks;
+        mServerCallbacks = nullptr;
 
-        delete char_callbacks_;
-        char_callbacks_ = nullptr;
+        delete mCharCallbacks;
+        mCharCallbacks = nullptr;
 
-        server_ = nullptr;
-        service_ = nullptr;
-        characteristic_ = nullptr;
+        mServer = nullptr;
+        mService = nullptr;
+        mCharacteristic = nullptr;
     }
 
     BLEServer* BluetoothLowEnergy::server() const noexcept
     {
-        return server_;
+        return mServer;
     }
 
     BLEService* BluetoothLowEnergy::service() const noexcept
     {
-        return service_;
+        return mService;
     }
 
     BLECharacteristic* BluetoothLowEnergy::characteristic() const noexcept
     {
-        return characteristic_;
+        return mCharacteristic;
     }
 
-    uint8_t BluetoothLowEnergy::device_connected() const noexcept
+    uint8_t BluetoothLowEnergy::deviceConnected() const noexcept
     {
-        return server_callbacks_ ? server_callbacks_->connected_devices : 0;
+        return mServerCallbacks ? mServerCallbacks->connectedDevices : 0;
     }
 
-    void BluetoothLowEnergy::characteristic_set_value(Packet& packet) const noexcept
+    void BluetoothLowEnergy::characteristicSetValue(Packet& packet) const noexcept
     {
-        if (!characteristic_ || packet.size == 0) return;
+        if (!mCharacteristic || packet.size == 0) return;
 
-        ESP_LOGD("BLE", "Sending packet, size: %u", packet.size);
-        characteristic_->setValue(packet.data, packet.size);
-        characteristic_->notify();
+        log_d("Sending packet, size: %u", packet.size);
+        mCharacteristic->setValue(packet.data, packet.size);
+        mCharacteristic->notify();
     }
 
     bool BluetoothLowEnergy::send(Packet& packet) const noexcept
     {
         if (packet.size == 0)
         {
-            ESP_LOGW("BLE", "Empty packet");
+            log_w("Empty packet");
             return false;
         }
 
-        if (!semaphore_.take())
+        if (!mSemaphore.take())
         {
             return false;
         }
 
         bool result = false;
-        if (device_connected() != 0)
+        if (deviceConnected() != 0)
         {
-            characteristic_set_value(packet);
+            characteristicSetValue(packet);
             result = true;
         }
         else
         {
-            ESP_LOGW("BLE", "No connected devices");
+            log_w("No connected devices");
         }
 
-        (void)semaphore_.give();
+        (void)mSemaphore.give();
         return result;
     }
 
     bool BluetoothLowEnergy::receive(Packet& packet) const noexcept
     {
         packet.size = 0;
-        if (device_connected() == 0)
+        if (deviceConnected() == 0)
         {
-            ESP_LOGW("BLE", "No connected devices");
+            log_w("No connected devices");
             return false;
         }
 
-        if (!char_callbacks_->callback->read(&packet) || packet.size == 0)
+        if (!mCharCallbacks->callback->read(&packet) || packet.size == 0)
         {
-            ESP_LOGW("BLE", "No data received");
+            log_w("No data received");
             return false;
         }
         return true;
     }
-}
+} // namespace hardware
