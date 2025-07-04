@@ -1,4 +1,4 @@
-# ESP32-C3 BLE Utilities
+# ESP32-C3 BLE
 
 ![Лицензия](https://img.shields.io/badge/license-Unlicense-blue.svg)
 ![PlatformIO](https://img.shields.io/badge/platform-ESP32--C3-green.svg)

@@ -1,5 +1,5 @@
 {
-  "name": "ESP32-C3 BLE Utilities",
+  "name": "ESP32-C3 BLE",
   "version": "1.1.0",
   "keywords": "esp32, c3, bluetooth, ble, bluetooth-low-energy",
   "description": "High-level Bluetooth Low Energy (BLE) library for ESP32-C3 with connection management and packet handling",
