@@ -1,8 +1,8 @@
-#include "ble/bluetooth_low_energy.h"
+#include "net/bluetooth_low_energy.h"
 #include <BLEDevice.h>
 #include <BLE2902.h>
 
-namespace ble
+namespace net
 {
     void BluetoothLowEnergy::onResponse(void* value, void* params) noexcept
     {

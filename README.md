@@ -32,7 +32,7 @@ lib_deps =
 ```cpp
 #include "ble/bluetooth_low_energy.h"
 
-ble::BluetoothLowEnergy ble;
+net::BluetoothLowEnergy ble;
 
 void setup() {
     ble.begin("ESP32-C3",

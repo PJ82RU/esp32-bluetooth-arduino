@@ -5,7 +5,7 @@
 #include "esp32_c3_objects/semaphore.h"
 #include "bluetooth_callbacks.h"
 
-namespace ble
+namespace net
 {
     /**
      * @brief Класс для работы с Bluetooth Low Energy (BLE)

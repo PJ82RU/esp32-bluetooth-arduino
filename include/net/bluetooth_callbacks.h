@@ -7,7 +7,7 @@
 #include "esp32_c3_objects/callback.h"
 #include "include/packets/packet.h"
 
-namespace ble
+namespace net
 {
     /**
      * @brief Класс обработчиков событий сервера BLE
