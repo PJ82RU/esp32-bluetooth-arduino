@@ -1,8 +1,8 @@
-#include "bluetooth_low_energy.h"
+#include "ble/bluetooth_low_energy.h"
 #include <BLEDevice.h>
 #include <BLE2902.h>
 
-namespace hardware
+namespace ble
 {
     void BluetoothLowEnergy::onResponse(void* value, void* params) noexcept
     {
@@ -27,7 +27,7 @@ namespace hardware
     bool BluetoothLowEnergy::begin(const char* name,
                                    const char* serviceUuid,
                                    const char* characteristicUuid,
-                                   pj_tools::Callback* callback) noexcept
+                                   esp32_c3_objects::Callback* callback) noexcept
     {
         if (!name || !serviceUuid || !characteristicUuid)
         {

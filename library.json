@@ -1,0 +1,44 @@
+{
+  "name": "ESP32-C3 BLE Utilities",
+  "version": "1.1.0",
+  "keywords": "esp32, c3, bluetooth, ble, bluetooth-low-energy",
+  "description": "High-level Bluetooth Low Energy (BLE) library for ESP32-C3 with connection management and packet handling",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/PJ82RU/esp32-bluetooth-arduino.git"
+  },
+  "authors": [
+    {
+      "name": "PJ82. Spiridonov Vladislav",
+      "email": "project82@mail.ru",
+      "maintainer": true
+    }
+  ],
+  "license": "Unlicense",
+  "frameworks": "arduino",
+  "platforms": "espressif32",
+  "headers": [
+    "bluetooth_callbacks.h",
+    "bluetooth_low_energy.h"
+  ],
+  "dependencies": {
+    "arduino-libraries/Arduino-ESP32": ">=2.0.0",
+    "PJ82RU/esp32-c3-utils": ">=1.0.0"
+  },
+  "examples": [
+    {
+      "name": "Basic BLE Server",
+      "base": "examples/basic",
+      "files": [
+        "src/main.cpp"
+      ]
+    },
+    {
+      "name": "BLE Packet Exchange",
+      "base": "examples/advanced",
+      "files": [
+        "src/main.cpp"
+      ]
+    }
+  ]
+}

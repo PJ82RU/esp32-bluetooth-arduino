@@ -1,12 +1,13 @@
-#ifndef HARDWARE_BLE_CALLBACKS_H
-#define HARDWARE_BLE_CALLBACKS_H
+// ReSharper disable CppUnusedIncludeDirective
+#ifndef BLE_CALLBACKS_H
+#define BLE_CALLBACKS_H
 
 #include <Arduino.h>
 #include <BLEUtils.h>
-#include "callback.h"
+#include "esp32_c3_objects/callback.h"
 #include "include/packets/packet.h"
 
-namespace hardware
+namespace ble
 {
     /**
      * @brief Класс обработчиков событий сервера BLE
@@ -47,7 +48,7 @@ namespace hardware
     {
     public:
         /// @brief Указатель на callback-функцию для обработки записей
-        pj_tools::Callback* callback = nullptr;
+        esp32_c3_objects::Callback* callback = nullptr;
 
         /**
          * @brief Обработчик записи данных в характеристику
@@ -57,4 +58,4 @@ namespace hardware
     };
 } // namespace hardware
 
-#endif // HARDWARE_BLE_CALLBACKS_H
+#endif //BLE_CALLBACKS_H

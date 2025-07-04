@@ -1,8 +1,8 @@
-#include "bluetooth_callbacks.h"
+#include "ble/bluetooth_callbacks.h"
 #include <cstring>
 #include <esp_log.h>
 
-namespace hardware
+namespace ble
 {
     void BluetoothServerCallbacks::onConnect(BLEServer* server)
     {

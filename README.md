@@ -1,31 +1,75 @@
-# ESP32 Bluetooth for Arduino
+# ESP32-C3 BLE Utilities
 
+![Лицензия](https://img.shields.io/badge/license-Unlicense-blue.svg)
+![PlatformIO](https://img.shields.io/badge/platform-ESP32--C3-green.svg)
+![Version](https://img.shields.io/badge/version-1.1.0-orange)
 
+Библиотека для работы с Bluetooth Low Energy (BLE) на ESP32-C3.
 
-### Создание объекта
+## Особенности
 
-```c++
-hardware::BluetoothLowEnergy ble;
+- Управление подключениями устройств
+- Обработка входящих данных через callback-функции
+- Отправка структурированных пакетов данных
+- Потокобезопасные операции
+- Поддержка стандартных UUID сервисов и характеристик
+
+## Установка
+
+### PlatformIO
+Добавьте в platformio.ini:
+```ini
+lib_deps =
+    https://github.com/PJ82RU/esp32-bluetooth-arduino.git
 ```
 
+### Arduino IDE
+1. Скачайте ZIP из GitHub
+2. Скетч → Подключить библиотеку → Добавить .ZIP библиотеку
 
+## Быстрый старт
 
-### Пример инициализации
+```cpp
+#include "ble/bluetooth_low_energy.h"
 
-```c++
-ble.callback.init(1);
-ble.callback.set(on_bluetooth_receive);
-ble.begin(BTS_NAME, BLUETOOTH_SERVICE_UUID, BLUETOOTH_CHARACTERISTIC_UUID);
-```
+ble::BluetoothLowEnergy ble;
 
+void setup() {
+    ble.begin("ESP32-C3",
+        "0000180a-0000-1000-8000-00805f9b34fb",
+        "00002a57-0000-1000-8000-00805f9b34fb",
+        nullptr);
+}
 
-
-### Пример функции обратного вызова
-
-```c++
-bool on_bluetooth_receive(void *p_value, void *p_parameters) {
-    auto frame = (hardware::net_frame_t *) p_value;
-    Serial.printf("In id = 0x%02x, size = %zu\n", frame->value.id, frame->value.size);
-    return false;
+void loop() {
+    // Пример отправки данных
+    Packet packet;
+    if(ble.send(packet)) {
+        log_d("Данные отправлены");
+    }
 }
 ```
+
+## Примеры
+
+1. `basic` - Создание BLE сервера
+2. `advanced` - Обмен структурированными пакетами
+
+## Документация
+
+### Класс `BluetoothLowEnergy`
+- `begin()` - Инициализация BLE сервера
+- `send()` - Отправка пакета данных
+- `receive()` - Получение пакета данных
+- `deviceConnected()` - Проверка подключенных устройств
+
+### Класс `BluetoothServerCallbacks`
+- `onConnect()` - Обработчик подключения
+- `onDisconnect()` - Обработчик отключения
+
+### Класс `BluetoothCharacteristicCallbacks`
+- `onWrite()` - Обработчик записи данных
+
+## Лицензия
+
+Библиотека распространяется как общественное достояние (Unlicense).

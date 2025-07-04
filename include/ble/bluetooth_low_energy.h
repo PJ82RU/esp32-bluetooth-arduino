@@ -1,11 +1,11 @@
-#ifndef HARDWARE_BLE_H
-#define HARDWARE_BLE_H
+#ifndef BLUETOOTH_LOW_ENERGY_H
+#define BLUETOOTH_LOW_ENERGY_H
 
-#include "callback.h"
-#include "semaphore.h"
+#include "esp32_c3_objects/callback.h"
+#include "esp32_c3_objects/semaphore.h"
 #include "bluetooth_callbacks.h"
 
-namespace hardware
+namespace ble
 {
     /**
      * @brief Класс для работы с Bluetooth Low Energy (BLE)
@@ -48,7 +48,7 @@ namespace hardware
         [[nodiscard]] bool begin(const char* name,
                                  const char* serviceUuid,
                                  const char* characteristicUuid,
-                                 pj_tools::Callback* callback) noexcept;
+                                 esp32_c3_objects::Callback* callback) noexcept;
 
         /**
          * @brief Остановка BLE сервера и освобождение ресурсов
@@ -104,7 +104,7 @@ namespace hardware
         void cleanupResources() noexcept;
 
         /// Семафор для синхронизации доступа
-        pj_tools::Semaphore mSemaphore;
+        esp32_c3_objects::Semaphore mSemaphore;
 
         /// Указатель на BLE сервер
         BLEServer* mServer = nullptr;
@@ -123,4 +123,4 @@ namespace hardware
     };
 } // namespace hardware
 
-#endif // HARDWARE_BLE_H
+#endif //BLUETOOTH_LOW_ENERGY_H
