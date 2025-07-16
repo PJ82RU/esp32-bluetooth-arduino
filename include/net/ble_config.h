@@ -205,14 +205,12 @@ namespace net
              * @brief UUID сервиса по умолчанию
              * @note В формате "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
              */
-            // std::string serviceUuid = "6E400001-B5A3-F393-E0A9-E50E24DCCA9E";
-            std::string serviceUuid = "cc9e7b30-9834-488f-b762-aa62f5022dd4";
+            std::string serviceUuid = "6E400001-B5A3-F393-E0A9-E50E24DCCA9E";
 
             /**
              * @brief UUID характеристики по умолчанию
              */
-            // std::string charUuid = "6E400002-B5A3-F393-E0A9-E50E24DCCA9E";
-            std::string charUuid = "cc9e7b31-9834-488f-b762-aa62f5022dd4";
+            std::string charUuid = "6E400002-B5A3-F393-E0A9-E50E24DCCA9E";
 
             /**
              * @brief Флаг инверсии байт (актуально для 128-бит UUID)
