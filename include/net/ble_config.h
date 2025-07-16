@@ -14,17 +14,56 @@ namespace net
      *          включая настройки контроллера, рекламы, соединений и GATT сервера.
      *          Поддерживает готовые пресеты конфигурации и ручную настройку.
      */
-    struct BleConfig
+    class BleConfig
     {
+    public:
         /**
-         * @brief Предустановленные режимы конфигурации
-         */
+      * @brief Предустановленные режимы конфигурации
+      */
         enum class Preset
         {
-            DEFAULT,    ///< Стандартные настройки ESP-IDF (баланс между производительностью и энергопотреблением)
-            HIGH_POWER, ///< Максимальная производительность (увеличенная мощность, отключено энергосбережение)
-            LOW_POWER   ///< Режим энергосбережения (пониженная мощность, увеличенные интервалы рекламы)
+            BLE5_DEFAULT,    ///< BLE 5.0: Баланс производительности и энергопотребления
+            BLE5_LOW_POWER,  ///< BLE 5.0: Режим энергосбережения (увеличенные интервалы)
+            BLE5_ULTRA_PERF, ///< BLE 5.0: Максимальная производительность (PHY 2M, extended advertising)
+            BLE4_DEFAULT,    ///< BLE 4.2: Стандартные настройки ESP-IDF
+            BLE4_LOW_POWER,  ///< BLE 4.2: Минимальное энергопотребление
+            BLE4_HIGH_PERF   ///< BLE 4.2: Высокая производительность (минимальные интервалы)
         };
+
+        /**
+             * @brief Конструктор с инициализацией пресета
+             * @param preset Пресет конфигурации (по умолчанию BLE4_DEFAULT)
+             */
+        explicit BleConfig(Preset preset = Preset::BLE4_DEFAULT);
+
+        /**
+         * @brief Получить текущий активный пресет конфигурации
+         * @return Preset Текущий примененный пресет
+         * @note Определяет пресет по текущим параметрам конфигурации
+         */
+        [[nodiscard]] Preset currentPreset() const noexcept;
+
+        /**
+         * @brief Проверка поддержки расширенной рекламы (BLE 5.0+)
+         */
+        [[nodiscard]] bool supportsExtendedAdvertising() const noexcept;
+
+        /**
+         * @brief Применяет предустановленную конфигурацию
+         * @param[in] preset Выбранный пресет (DEFAULT, HIGH_POWER, LOW_POWER)
+         * @details В зависимости от выбранного пресета настраивает:
+         * - Мощность передачи
+         * - Режим энергосбережения
+         * - Интервалы рекламы
+         * - Количество соединений
+         */
+        void applyPreset(Preset preset) noexcept;
+
+        /**
+         * @brief Копирует значения из другой конфигурации
+         * @param[in] source Источник данных для копирования
+         */
+        void copyFrom(const BleConfig& source) noexcept;
 
         /**
          * @brief Конфигурация BLE контроллера
@@ -36,16 +75,16 @@ namespace net
         esp_bt_controller_config_t controller = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
 
         /**
-         * @brief Параметры расширенной рекламы
+         * @brief Параметры расширенной рекламы (BLE 5.0)
          * @details Настройки из esp_ble_gap_ext_adv_params_t:
          * - interval_min/max: Интервалы рекламы (в единицах 0.625 мс)
          * - tx_power: Мощность передачи рекламных пакетов
          * - primary_phy/secondary_phy: Используемые PHY
          */
-        esp_ble_gap_ext_adv_params_t advertising = {
+        esp_ble_gap_ext_adv_params_t extAdvParams = {
             .type = ESP_BLE_GAP_SET_EXT_ADV_PROP_CONNECTABLE,   ///< Устройство разрешает подключения
-            .interval_min = 0x100,                              ///< Минимальный интервал = 160 мс
-            .interval_max = 0x200,                              ///< Максимальный интервал = 320 мс
+            .interval_min = 0x20,                               ///< Минимальный интервал = 160 мс
+            .interval_max = 0x40,                               ///< Максимальный интервал = 320 мс
             .channel_map = ADV_CHNL_ALL,                        ///< Использовать все BLE-каналы (37, 38, 39)
             .own_addr_type = BLE_ADDR_TYPE_PUBLIC,              ///< Публичный статический адрес
             .peer_addr_type = BLE_ADDR_TYPE_PUBLIC,             ///< Тип адреса peer-устройства
@@ -57,6 +96,20 @@ namespace net
             .secondary_phy = ESP_BLE_GAP_PHY_2M,                ///< Вторичная PHY: 2 Mbps (высокая скорость)
             .sid = 0,                                           ///< ID рекламного набора
             .scan_req_notif = false                             ///< Не уведомлять о scan-запросах
+        };
+
+        /**
+         * @brief Параметры legacy рекламы (BLE 4.x)
+         */
+        esp_ble_adv_params_t legacyAdvParams = {
+            .adv_int_min = 0x20,                                    ///< 20ms (минимальный интервал)
+            .adv_int_max = 0x40,                                    ///< 40ms (максимальный интервал)
+            .adv_type = ADV_TYPE_IND,                               ///< Connectable undirected advertising
+            .own_addr_type = BLE_ADDR_TYPE_PUBLIC,                  ///< Публичный адрес
+            .peer_addr = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00},      ///< Не используется
+            .peer_addr_type = BLE_ADDR_TYPE_PUBLIC,                 ///< Тип адреса peer (не используется)
+            .channel_map = ADV_CHNL_ALL,                            ///< Все каналы (37, 38, 39)
+            .adv_filter_policy = ADV_FILTER_ALLOW_SCAN_ANY_CON_ANY, ///< Фильтрация
         };
 
         /**
@@ -135,7 +188,7 @@ namespace net
              * @brief Флаги рекламы
              */
             uint8_t flags = ESP_BLE_ADV_FLAG_GEN_DISC | ESP_BLE_ADV_FLAG_BREDR_NOT_SPT;
-        } advertisingParams;
+        } advertising;
 
         /**
          * @brief Параметры GATT сервера и характеристик
@@ -152,12 +205,19 @@ namespace net
              * @brief UUID сервиса по умолчанию
              * @note В формате "6E400001-B5A3-F393-E0A9-E50E24DCCA9E"
              */
-            std::string serviceUuid = "6E400001-B5A3-F393-E0A9-E50E24DCCA9E";
+            // std::string serviceUuid = "6E400001-B5A3-F393-E0A9-E50E24DCCA9E";
+            std::string serviceUuid = "cc9e7b30-9834-488f-b762-aa62f5022dd4";
 
             /**
              * @brief UUID характеристики по умолчанию
              */
-            std::string charUuid = "6E400002-B5A3-F393-E0A9-E50E24DCCA9E";
+            // std::string charUuid = "6E400002-B5A3-F393-E0A9-E50E24DCCA9E";
+            std::string charUuid = "cc9e7b31-9834-488f-b762-aa62f5022dd4";
+
+            /**
+             * @brief Флаг инверсии байт (актуально для 128-бит UUID)
+             */
+            bool invertBytes = false;
 
             /**
              * @brief Свойства характеристики
@@ -183,47 +243,11 @@ namespace net
                 ESP_GATT_PERM_WRITE;
         } gatt;
 
-        /**
-         * @brief Применяет предустановленную конфигурацию
-         * @param[in] preset Выбранный пресет (DEFAULT, HIGH_POWER, LOW_POWER)
-         * @details В зависимости от выбранного пресета настраивает:
-         * - Мощность передачи
-         * - Режим энергосбережения
-         * - Интервалы рекламы
-         * - Количество соединений
-         */
-        void applyPreset(const Preset preset)
-        {
-            // Общие настройки для всех пресетов
-            controller = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
-            controller.bluetooth_mode = ESP_BT_MODE_BLE;
-            controller.ble_max_act = 6;
+    private:
+        void applyBle5Preset(Preset preset) noexcept;
+        void applyBle4Preset(Preset preset) noexcept;
 
-            // Настройки по умолчанию для рекламы
-            advertising.tx_power = ESP_PWR_LVL_P9;
-            advertising.interval_min = 0x100; // 160 ms
-            advertising.interval_max = 0x200; // 320 ms
-
-            // Специфичные настройки для каждого пресета
-            switch (preset)
-            {
-            case Preset::HIGH_POWER:
-                controller.txpwr_dft = ESP_PWR_LVL_P9;
-                controller.sleep_mode = ESP_BT_SLEEP_MODE_NONE;
-                advertising.interval_min = 0x80; // 80 ms
-                break;
-
-            case Preset::LOW_POWER:
-                controller.txpwr_dft = ESP_PWR_LVL_N12;
-                controller.sleep_mode = ESP_BT_SLEEP_MODE_1;
-                advertising.tx_power = ESP_PWR_LVL_N6;
-                advertising.interval_max = 0x400; // 640 ms
-                break;
-
-            default: // DEFAULT сохраняет базовые настройки
-                break;
-            }
-        }
+        Preset mCurrentPreset = Preset::BLE4_DEFAULT; ///< Текущий активный пресет
     };
 } // namespace net::ble
 

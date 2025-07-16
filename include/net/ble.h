@@ -31,10 +31,16 @@ namespace net
         /// @brief Тег для логирования
         static constexpr auto TAG = "BLE";
 
-        /// @brief Максимально возможный размер MTU для BLE 5.0
-        static constexpr uint16_t MAX_MTU = 517;
-
-        explicit BLE(const std::shared_ptr<BleConfig>& config = nullptr);
+        /**
+         * @brief Конструктор BLE-контроллера
+         * @param preset Пресет конфигурации (по умолчанию BLE4_DEFAULT)
+         * @note Выбор пресета влияет на:
+         * - Мощность передачи
+         * - Режим энергосбережения
+         * - Поддерживаемую версию BLE (4.2 или 5.0)
+         * - Параметры рекламы и соединений
+         */
+        explicit BLE(BleConfig::Preset preset = BleConfig::Preset::BLE4_DEFAULT);
         ~BLE();
 
         // Запрет копирования и присваивания
@@ -67,9 +73,10 @@ namespace net
         /**
          * @brief Конвертация строкового UUID в esp_bt_uuid_t
          * @param uuidStr Строка UUID в формате "00001234-0000-1000-8000-00805F9B34FB"
+         * @param invertBytes Флаг инверсии байт (актуально для 128-бит UUID)
          * @return esp_bt_uuid_t Преобразованный UUID
          */
-        static esp_bt_uuid_t uuidFromString(const std::string& uuidStr);
+        static esp_bt_uuid_t uuidFromString(const std::string& uuidStr, bool invertBytes);
 
         /**
          * @brief Создание BLE сервиса по UUID
@@ -107,21 +114,18 @@ namespace net
         /**
          * @brief Отправка данных через BLE
          * @param connId Идентификатор соединения (0 - всем подключенным)
-         * @param data Указатель на данные
-         * @param length Длина данных
-         * @param useFastPhy Флаг использования быстрого PHY (2M)
+         * @param buffer Буфер данных
+         * @param size Длина данных в буфере
          * @return esp_err_t Код ошибки ESP-IDF
          */
-        esp_err_t sendData(uint16_t connId, const uint8_t* data, size_t length,
-                           bool useFastPhy = true) const;
+        esp_err_t sendData(uint16_t connId, std::array<uint8_t, MAX_MTU>& buffer, size_t size) const;
 
         /**
          * @brief Отправка пакета данных через BLE
          * @param packet Ссылка на пакет для отправки
-         * @param useFastPhy Флаг использования быстрого PHY (2M)
          * @return esp_err_t Код ошибки ESP-IDF
          */
-        esp_err_t sendPacket(const Packet& packet, bool useFastPhy = true) const;
+        esp_err_t sendPacket(Packet& packet) const;
 
         /**
          * @brief Остановка BLE стека и освобождение ресурсов
@@ -152,7 +156,7 @@ namespace net
          * @param newConfig Новая конфигурация
          * @return esp_err_t ESP_OK если успешно, ESP_ERR_INVALID_STATE если уже инициализирован
          */
-        esp_err_t updateConfig(const std::shared_ptr<BleConfig>& newConfig);
+        esp_err_t updateConfig(const BleConfig& newConfig);
 
     private:
         /**
@@ -174,9 +178,19 @@ namespace net
         void handleWriteEvent(uint16_t connId, const esp_ble_gatts_cb_param_t* param) const;
 
         /**
+         * @brief Запуск legacy рекламы (BLE 4.x)
+         */
+        esp_err_t startLegacyAdvertising();
+
+        /**
          * @brief Настройка параметров расширенной рекламы BLE 5.0
          */
         esp_err_t configureExtendedAdvertising();
+
+        /**
+         * @brief Внутренний метод отправки данных конкретному устройству
+         */
+        esp_err_t sendToDevice(uint16_t connId, std::array<uint8_t, MAX_MTU>& buffer, size_t size) const noexcept;
 
         struct DeviceConnection
         {
@@ -184,8 +198,8 @@ namespace net
             esp_bd_addr_t address;
         };
 
-        mutable std::mutex mMutex; ///< Мьютекс для потокобезопасности
-        std::shared_ptr<BleConfig> mConfig;
+        mutable std::recursive_mutex mMutex;              ///< Мьютекс для потокобезопасности
+        BleConfig mConfig;                                ///< Текущая конфигурация BLE
         std::vector<DeviceConnection> mActiveConnections; ///< Список активных подключений
 
         std::string mDeviceName;                                    ///< Имя BLE-устройства для рекламы и подключения

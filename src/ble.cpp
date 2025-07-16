@@ -20,11 +20,10 @@ static net::BLE* sBLEInstance = nullptr;
 
 namespace net
 {
-    BLE::BLE(const std::shared_ptr<BleConfig>& config) :
-        mConfig(config ? config : std::make_shared<BleConfig>())
+    BLE::BLE(const BleConfig::Preset preset) :
+        mConfig(preset)
     {
         sBLEInstance = this;
-        if (!config) mConfig->applyPreset(BleConfig::Preset::HIGH_POWER);
         ESP_LOGD(TAG, "Instance created");
     }
 
@@ -61,14 +60,14 @@ namespace net
         ESP_ERROR_CHECK(esp_bt_controller_mem_release(ESP_BT_MODE_CLASSIC_BT));
 
         // Initialize BLE 5.0 controller
-        esp_err_t ret = esp_bt_controller_init(&mConfig->controller);
+        esp_err_t ret = esp_bt_controller_init(&mConfig.controller);
         if (ret != ESP_OK)
         {
             ESP_LOGE(TAG, "Controller init failed: %s", esp_err_to_name(ret));
             return ret;
         }
 
-        ret = esp_bt_controller_enable(static_cast<esp_bt_mode_t>(mConfig->controller.bluetooth_mode));
+        ret = esp_bt_controller_enable(static_cast<esp_bt_mode_t>(mConfig.controller.bluetooth_mode));
         if (ret != ESP_OK)
         {
             ESP_LOGE(TAG, "Controller enable failed: %s", esp_err_to_name(ret));
@@ -111,21 +110,23 @@ namespace net
             return ret;
         }
 
-        esp_ble_gap_set_security_param(ESP_BLE_SM_AUTHEN_REQ_MODE, &mConfig->security.authReq, sizeof(uint8_t));
-        esp_ble_gap_set_security_param(ESP_BLE_SM_IOCAP_MODE, &mConfig->security.ioCap, sizeof(uint8_t));
-        esp_ble_gap_set_security_param(ESP_BLE_SM_MAX_KEY_SIZE, &mConfig->security.keySize, sizeof(uint8_t));
-        esp_ble_gap_set_security_param(ESP_BLE_SM_SET_INIT_KEY, &mConfig->security.initKey, sizeof(uint8_t));
-        esp_ble_gap_set_security_param(ESP_BLE_SM_SET_RSP_KEY, &mConfig->security.rspKey, sizeof(uint8_t));
+        esp_ble_gap_set_security_param(ESP_BLE_SM_AUTHEN_REQ_MODE, &mConfig.security.authReq, sizeof(uint8_t));
+        esp_ble_gap_set_security_param(ESP_BLE_SM_IOCAP_MODE, &mConfig.security.ioCap, sizeof(uint8_t));
+        esp_ble_gap_set_security_param(ESP_BLE_SM_MAX_KEY_SIZE, &mConfig.security.keySize, sizeof(uint8_t));
+        esp_ble_gap_set_security_param(ESP_BLE_SM_SET_INIT_KEY, &mConfig.security.initKey, sizeof(uint8_t));
+        esp_ble_gap_set_security_param(ESP_BLE_SM_SET_RSP_KEY, &mConfig.security.rspKey, sizeof(uint8_t));
 
-        ret = esp_ble_gatts_app_register(mConfig->gatt.appId);
+        ret = esp_ble_gatts_app_register(mConfig.gatt.appId);
         if (ret != ESP_OK)
         {
             ESP_LOGE(TAG, "GATTS app register failed: %s", esp_err_to_name(ret));
             return ret;
         }
 
+        mIsInitialized = true;
+
         // Устанавливаем предпочтительные параметры PHY по умолчанию
-        ret = setPreferredPhy(mConfig->connection.txPhy, mConfig->connection.rxPhy);
+        ret = setPreferredPhy(mConfig.connection.txPhy, mConfig.connection.rxPhy);
         if (ret != ESP_OK)
         {
             ESP_LOGE(TAG, "Failed to set preferred PHY: %s (0x%04X)",
@@ -133,7 +134,6 @@ namespace net
             return ret;
         }
 
-        mIsInitialized = true;
         ESP_LOGI(TAG, "BLE 5.0 initialized successfully. Device name: %s", deviceName.c_str());
         return ESP_OK;
     }
@@ -141,45 +141,49 @@ namespace net
     esp_err_t BLE::quickStart(const std::string& deviceName,
                               std::unique_ptr<esp32_c3::objects::Callback> dataCallback)
     {
-        // Инициализация BLE стека
+        // 1. Инициализация BLE стека
         esp_err_t ret = initialize(deviceName, std::move(dataCallback));
         if (ret != ESP_OK)
         {
+            ESP_LOGE(TAG, "BLE initialization failed: %s", esp_err_to_name(ret));
             return ret;
         }
 
-        // Создание сервиса
-        const esp_bt_uuid_t mServiceUuid = uuidFromString(mConfig->gatt.serviceUuid);
-        ret = createService(mServiceUuid);
+        // 2. Создание сервиса
+        const esp_bt_uuid_t serviceUuid = uuidFromString(mConfig.gatt.serviceUuid, mConfig.gatt.invertBytes);
+        ret = createService(serviceUuid);
         if (ret != ESP_OK)
         {
+            ESP_LOGE(TAG, "Service creation failed: %s", esp_err_to_name(ret));
             stop();
             return ret;
         }
 
-        // Создание характеристики с возможностью чтения и записи
-        const esp_bt_uuid_t mCharUuid = uuidFromString(mConfig->gatt.charUuid);
-        ret = createCharacteristic(mCharUuid, mConfig->gatt.charProperties);
+        // 3. Создание характеристики
+        const esp_bt_uuid_t charUuid = uuidFromString(mConfig.gatt.charUuid, mConfig.gatt.invertBytes);
+        ret = createCharacteristic(charUuid, mConfig.gatt.charProperties);
         if (ret != ESP_OK)
         {
+            ESP_LOGE(TAG, "Characteristic creation failed: %s", esp_err_to_name(ret));
             stop();
             return ret;
         }
 
-        // Запуск рекламы
+        // 4. Запуск рекламы (автовыбор типа)
         ret = startAdvertising();
         if (ret != ESP_OK)
         {
+            ESP_LOGE(TAG, "Advertising start failed: %s", esp_err_to_name(ret));
             stop();
             return ret;
         }
 
         ESP_LOGI(TAG, "Quick start completed. Service: %s, Char: %s",
-                 mConfig->gatt.serviceUuid.c_str(), mConfig->gatt.charUuid.c_str());
+                 mConfig.gatt.serviceUuid.c_str(), mConfig.gatt.charUuid.c_str());
         return ESP_OK;
     }
 
-    esp_bt_uuid_t BLE::uuidFromString(const std::string& uuidStr)
+    esp_bt_uuid_t BLE::uuidFromString(const std::string& uuidStr, const bool invertBytes)
     {
         if (uuidStr.empty())
         {
@@ -236,7 +240,12 @@ namespace net
             // Конвертируем каждые 2 символа в байт
             for (size_t i = 0; i < ESP_UUID_LEN_128; i++)
             {
-                std::string byteStr = normalized.substr(i * 2, 2);
+                // Если `invertBytes` == true, читаем байты в обратном порядке
+                const size_t bytePos = invertBytes
+                                           ? (ESP_UUID_LEN_128 - 1 - i) * 2 // Инвертируем порядок
+                                           : i * 2;                         // Оставляем как есть
+
+                std::string byteStr = normalized.substr(bytePos, 2);
                 uuid.uuid.uuid128[i] = static_cast<uint8_t>(strtoul(byteStr.c_str(), nullptr, 16));
             }
 
@@ -325,12 +334,12 @@ namespace net
 
         // 4. Вызов API с корректными параметрами
         const esp_err_t ret = esp_ble_gatts_add_char(
-            mServiceHandle,                // Хэндл сервиса
-            &charUuidCopy,                 // Копия UUID характеристики
-            mConfig->gatt.charPermissions, // Права доступа
-            properties,                    // Свойства характеристики
-            &charValue,                    // Значение характеристики
-            &control                       // Управление атрибутом
+            mServiceHandle,               // Хэндл сервиса
+            &charUuidCopy,                // Копия UUID характеристики
+            mConfig.gatt.charPermissions, // Права доступа
+            properties,                   // Свойства характеристики
+            &charValue,                   // Значение характеристики
+            &control                      // Управление атрибутом
         );
 
         if (ret != ESP_OK)
@@ -353,7 +362,16 @@ namespace net
             return ESP_ERR_INVALID_STATE;
         }
 
-        return configureExtendedAdvertising();
+        if (mConfig.supportsExtendedAdvertising())
+        {
+            ESP_LOGI(TAG, "Starting extended advertising (BLE 5.0)");
+            return configureExtendedAdvertising();
+        }
+        else
+        {
+            ESP_LOGI(TAG, "Starting legacy advertising (BLE 4.2)");
+            return startLegacyAdvertising();
+        }
     }
 
     esp_err_t BLE::setPreferredPhy(const esp_ble_gap_phy_mask_t txPhy,
@@ -390,67 +408,32 @@ namespace net
         return esp_ble_gap_set_preferred_default_phy(txPhy, rxPhy);
     }
 
-    esp_err_t BLE::sendData(uint16_t connId,
-                            const uint8_t* data,
-                            const size_t length,
-                            const bool useFastPhy) const
+    esp_err_t BLE::sendData(const uint16_t connId, std::array<uint8_t, MAX_MTU>& buffer, const size_t size) const
     {
         std::lock_guard lock(mMutex);
 
-        if (!mIsInitialized || mCharHandle == 0)
+        // Валидация параметров
+        if (!mIsInitialized || size == 0 || size > MAX_MTU || size > mMtu)
         {
-            ESP_LOGE(TAG, "BLE not initialized or characteristic not created");
-            return ESP_ERR_INVALID_STATE;
-        }
-
-        if (!data || length == 0 || length > mMtu)
-        {
-            ESP_LOGE(TAG, "Invalid data (len=%zu, max=%d)", length, mMtu);
+            ESP_LOGE(TAG, "Invalid send params: init=%d, len=%zu, max_mtu=%u, current_mtu=%u",
+                     mIsInitialized, size, MAX_MTU, mMtu);
             return ESP_ERR_INVALID_ARG;
         }
 
-        // Устанавливаем PHY для соединения, если требуется
-        if (useFastPhy && connId != 0)
-        {
-            // Получаем MAC-адрес из сохраненных подключений
-            const auto it = std::ranges::find_if(mActiveConnections,
-                                                 [connId](const auto& conn) { return conn.connId == connId; });
-
-            if (it != mActiveConnections.end())
-            {
-                const esp_err_t phyRet = esp_ble_gap_set_preferred_phy(
-                    const_cast<uint8_t*>(it->address),
-                    0x03, // ESP_BLE_GAP_ALL_PHYS_PREF
-                    ESP_BLE_GAP_PHY_2M,
-                    ESP_BLE_GAP_PHY_2M,
-                    0 // ESP_BLE_GAP_PHY_OPTION_NO_PREF
-                );
-
-                if (phyRet != ESP_OK)
-                {
-                    ESP_LOGW(TAG, "Failed to set 2M PHY for conn %d: %s",
-                             connId, esp_err_to_name(phyRet));
-                }
-            }
-        }
-
+        // Обработка broadcast
         if (connId == 0)
         {
             if (mActiveConnections.empty())
             {
-                ESP_LOGW(TAG, "No active connections for broadcast");
+                ESP_LOGW(TAG, "No connections for broadcast");
                 return ESP_ERR_NOT_FOUND;
             }
 
             esp_err_t finalRet = ESP_OK;
             for (const auto& [connId, address] : mActiveConnections)
             {
-                const esp_err_t ret = esp_ble_gatts_send_indicate(
-                    mGattsIf, connId, mCharHandle, length, const_cast<uint8_t*>(data), false);
-
-                if (ret != ESP_OK)
+                if (const esp_err_t ret = sendToDevice(connId, buffer, size); ret != ESP_OK)
                 {
-                    ESP_LOGE(TAG, "Failed to send to conn %d: %s", connId, esp_err_to_name(ret));
                     finalRet = ret;
                 }
             }
@@ -458,19 +441,36 @@ namespace net
         }
 
         // Отправка конкретному устройству
+        return sendToDevice(connId, buffer, size);
+    }
+
+    esp_err_t BLE::sendToDevice(uint16_t connId, std::array<uint8_t, MAX_MTU>& buffer, const size_t size) const noexcept
+    {
+        // Поиск соединения
+        const auto it = std::ranges::find_if(mActiveConnections,
+                                             [connId](const auto& conn) { return conn.connId == connId; });
+
+        if (it == mActiveConnections.cend())
+        {
+            ESP_LOGE(TAG, "Connection %u not found", connId);
+            return ESP_ERR_NOT_FOUND;
+        }
+
+        // Оптимизированная отправка через кэшированные параметры
         const esp_err_t ret = esp_ble_gatts_send_indicate(
-            mGattsIf, connId, mCharHandle, length, const_cast<uint8_t*>(data), false);
+            mGattsIf, connId, mCharHandle, size, buffer.data(), false);
 
         if (ret != ESP_OK)
         {
-            ESP_LOGE(TAG, "Failed to send to conn %d: %s", connId, esp_err_to_name(ret));
+            ESP_LOGE(TAG, "Send failed to %u: %s", connId, esp_err_to_name(ret));
         }
+
         return ret;
     }
 
-    esp_err_t BLE::sendPacket(const Packet& packet, const bool useFastPhy) const
+    esp_err_t BLE::sendPacket(Packet& packet) const
     {
-        return sendData(packet.id, packet.data.data(), packet.size, useFastPhy);
+        return sendData(packet.id, packet.buffer, packet.size);
     }
 
     esp_err_t BLE::stop()
@@ -489,6 +489,7 @@ namespace net
         };
 
         // Останавливаем рекламу (если активна)
+        esp_ble_gap_stop_advertising();
         constexpr uint8_t extAdvInst = 0; // Останавливаем нулевую инстанцию
         check_error(esp_ble_gap_ext_adv_stop(1, &extAdvInst), "Stop extended advertising failed");
 
@@ -528,26 +529,22 @@ namespace net
     std::shared_ptr<const BleConfig> BLE::getConfig() const
     {
         std::lock_guard lock(mMutex);
-        return mConfig;
+        return std::make_shared<BleConfig>(mConfig);
     }
 
-    esp_err_t BLE::updateConfig(const std::shared_ptr<BleConfig>& newConfig)
+    esp_err_t BLE::updateConfig(const BleConfig& newConfig)
     {
-        if (!newConfig)
-        {
-            ESP_LOGE(TAG, "Invalid nullptr config");
-            return ESP_ERR_INVALID_ARG;
-        }
-
         std::lock_guard lock(mMutex);
 
         if (mIsInitialized)
         {
-            ESP_LOGW(TAG, "Cannot update config after initialization");
+            ESP_LOGE(TAG, "Cannot update config after initialization");
             return ESP_ERR_INVALID_STATE;
         }
 
-        mConfig = newConfig;
+        mConfig.copyFrom(newConfig);
+        ESP_LOGD(TAG, "Config updated (preset: %d)",
+                 static_cast<int>(mConfig.currentPreset()));
         return ESP_OK;
     }
 
@@ -692,97 +689,206 @@ namespace net
         }
     }
 
-    esp_err_t BLE::configureExtendedAdvertising()
+    esp_err_t BLE::startLegacyAdvertising()
     {
-        // 1. Устанавливаем параметры расширенной рекламы
-        esp_err_t ret = esp_ble_gap_ext_adv_set_params(0, &mConfig->advertising);
-        if (ret != ESP_OK)
+        std::lock_guard lock(mMutex);
+
+        if (!mIsInitialized || mServiceHandle == 0)
         {
-            ESP_LOGE(TAG, "Set extended adv params failed: %s", esp_err_to_name(ret));
+            ESP_LOGE(TAG, "BLE not initialized");
+            return ESP_ERR_INVALID_STATE;
+        }
+
+        // 1. Подготовка advertising data
+        constexpr size_t MAX_ADV_DATA_LEN = ESP_BLE_ADV_DATA_LEN_MAX - 2;
+        const uint8_t nameLen = static_cast<uint8_t>(std::min(mDeviceName.length(), MAX_ADV_DATA_LEN));
+
+        std::vector<uint8_t> advData = {
+            // Flags
+            0x02, ESP_BLE_AD_TYPE_FLAG, mConfig.advertising.flags,
+            // Device name
+            static_cast<uint8_t>(nameLen + 1), ESP_BLE_AD_TYPE_NAME_CMPL
+        };
+        advData.insert(advData.end(), mDeviceName.begin(), mDeviceName.begin() + nameLen);
+
+        // 2. Добавление UUID сервиса (если 128-bit)
+        if (const auto [len, uuid] = uuidFromString(mConfig.gatt.serviceUuid, mConfig.gatt.invertBytes); len == ESP_UUID_LEN_128)
+        {
+            advData.insert(advData.end(), {
+                               static_cast<uint8_t>(1 + ESP_UUID_LEN_128),
+                               ESP_BLE_AD_TYPE_128SRV_CMPL
+                           });
+            advData.insert(advData.end(), uuid.uuid128, uuid.uuid128 + ESP_UUID_LEN_128);
+        }
+
+        // 3. Установка advertising data
+        if (const esp_err_t ret = esp_ble_gap_config_adv_data_raw(advData.data(), advData.size());
+            ret != ESP_OK)
+        {
+            ESP_LOGE(TAG, "Config adv data failed: %s", esp_err_to_name(ret));
             return ret;
         }
 
-        // 2. Подготавливаем данные рекламы с реальным именем устройства
+        // 4. Запуск рекламы
+        if (const esp_err_t ret = esp_ble_gap_start_advertising(&mConfig.legacyAdvParams);
+            ret != ESP_OK)
+        {
+            ESP_LOGE(TAG, "Start advertising failed: %s", esp_err_to_name(ret));
+            return ret;
+        }
+
+        ESP_LOGI(TAG, "Legacy advertising started | Intv: %d-%dms | Flags: 0x%02X",
+                 mConfig.legacyAdvParams.adv_int_min * 5/8,
+                 mConfig.legacyAdvParams.adv_int_max * 5/8,
+                 mConfig.advertising.flags);
+
+        return ESP_OK;
+    }
+
+    esp_err_t BLE::configureExtendedAdvertising()
+    {
+        std::lock_guard lock(mMutex);
+
+        if (!mIsInitialized || mServiceHandle == 0)
+        {
+            ESP_LOGE(TAG, "BLE not properly initialized");
+            return ESP_ERR_INVALID_STATE;
+        }
+
+        // 1. Установка параметров рекламы из конфига
+        esp_err_t ret = esp_ble_gap_ext_adv_set_params(0, &mConfig.extAdvParams);
+        if (ret != ESP_OK)
+        {
+            ESP_LOGE(TAG, "Set extended adv params failed (0x%X): %s", ret, esp_err_to_name(ret));
+            return ret;
+        }
+
+        // 2. Формирование advertising data
         std::vector<uint8_t> advData;
 
-        // Добавляем флаги
-        advData.push_back(0x02); // длина
-        advData.push_back(ESP_BLE_AD_TYPE_FLAG);
-        advData.push_back(mConfig->advertisingParams.flags);
+        // 2.1. Флаги из конфига (обязательное поле)
+        advData.insert(advData.end(), {
+                           0x02, // Length
+                           ESP_BLE_AD_TYPE_FLAG,
+                           mConfig.advertising.flags // Флаги из конфига
+                       });
 
-        // Добавляем имя устройства
-        const uint8_t nameLen = static_cast<uint8_t>(std::min(mDeviceName.length(),
-                                                              static_cast<size_t>(ESP_BLE_ADV_DATA_LEN_MAX - 2)));
-        advData.push_back(nameLen + 1); // длина
-        advData.push_back(ESP_BLE_AD_TYPE_NAME_CMPL);
+        // 2.2. Имя устройства (макс. 28 байт для лучшей совместимости)
+        const uint8_t nameLen = static_cast<uint8_t>(std::min(mDeviceName.length(), static_cast<size_t>(28)));
+        advData.insert(advData.end(), {
+                           static_cast<uint8_t>(nameLen + 1), // Length
+                           ESP_BLE_AD_TYPE_NAME_CMPL
+                       });
         advData.insert(advData.end(), mDeviceName.begin(), mDeviceName.begin() + nameLen);
 
-        // Устанавливаем данные рекламы
+        // 2.3. UUID сервиса из конфига (автоматическое определение типа)
+        if (const auto [uuidLen, uuid] = uuidFromString(mConfig.gatt.serviceUuid, mConfig.gatt.invertBytes); uuidLen == ESP_UUID_LEN_16)
+        {
+            advData.insert(advData.end(), {
+                               0x03, // Length
+                               ESP_BLE_AD_TYPE_16SRV_CMPL,
+                               static_cast<uint8_t>(uuid.uuid16 & 0xFF),
+                               static_cast<uint8_t>((uuid.uuid16 >> 8) & 0xFF)
+                           });
+        }
+        else if (uuidLen == ESP_UUID_LEN_128)
+        {
+            advData.insert(advData.end(), {
+                               static_cast<uint8_t>(1 + ESP_UUID_LEN_128),
+                               ESP_BLE_AD_TYPE_128SRV_CMPL
+                           });
+            advData.insert(advData.end(), uuid.uuid128, uuid.uuid128 + ESP_UUID_LEN_128);
+        }
+
+        // 3. Установка advertising data
         ret = esp_ble_gap_config_ext_adv_data_raw(0, advData.size(), advData.data());
         if (ret != ESP_OK)
         {
-            ESP_LOGE(TAG, "Config adv data raw failed: %s", esp_err_to_name(ret));
+            ESP_LOGE(TAG, "Config adv data failed (0x%X): %s", ret, esp_err_to_name(ret));
             return ret;
         }
 
-        // 3. Начинаем расширенную рекламу
+        // 4. Scan Response Data (оставляем пустым, но можно добавить в конфиг при необходимости)
+        static constexpr std::array<uint8_t, 0> scanRspData = {};
+        ret = esp_ble_gap_config_ext_scan_rsp_data_raw(0, scanRspData.size(), scanRspData.data());
+        if (ret != ESP_OK)
+        {
+            ESP_LOGE(TAG, "Config scan rsp data failed (0x%X): %s", ret, esp_err_to_name(ret));
+            return ret;
+        }
+
+        // 5. Запуск рекламы
         constexpr esp_ble_gap_ext_adv_t extAdv = {
             .instance = 0,
-            .duration = 0,
-            .max_events = 0
+            .duration = 0,  // Бесконечно
+            .max_events = 0 // Без ограничений
         };
 
         ret = esp_ble_gap_ext_adv_start(1, &extAdv);
         if (ret != ESP_OK)
         {
-            ESP_LOGE(TAG, "Start extended adv failed: %s", esp_err_to_name(ret));
+            ESP_LOGE(TAG, "Start extended adv failed (0x%X): %s", ret, esp_err_to_name(ret));
             return ret;
         }
 
-        ESP_LOGI(TAG, "Extended advertising started successfully");
+        ESP_LOGI(TAG, "Extended advertising started | PHY: %s | Interval: %.1f-%.1fms | TxPower: %ddBm | UUID: %s",
+                 mConfig.extAdvParams.primary_phy == ESP_BLE_GAP_PHY_2M ? "2M" : "1M",
+                 mConfig.extAdvParams.interval_min * 0.625f,
+                 mConfig.extAdvParams.interval_max * 0.625f,
+                 mConfig.extAdvParams.tx_power,
+                 mConfig.gatt.serviceUuid.c_str());
+
         return ESP_OK;
     }
 
     void BLE::handleWriteEvent(const uint16_t connId, const esp_ble_gatts_cb_param_t* param) const
     {
-        std::lock_guard lock(mMutex);
-
-        if (!param || !mDataCallback)
+        if (param == nullptr)
         {
-            ESP_LOGE(TAG, "Invalid write event or callback. Conn_id: %d", connId);
+            ESP_LOGE(TAG, "Null event param for conn: %u", connId);
             return;
         }
 
+        std::lock_guard lock(mMutex);
+
+        // Проверка callback
+        if (mDataCallback == nullptr)
+        {
+            ESP_LOGE(TAG, "Data callback is null. Conn: %u", connId);
+            return;
+        }
+
+        // Валидация handle
         if (param->write.handle != mCharHandle)
         {
-            ESP_LOGW(TAG, "Write to unknown handle: %d (expected: %d). Conn_id: %d",
+            ESP_LOGW(TAG, "Invalid handle %u (expected %u). Conn: %u",
                      param->write.handle, mCharHandle, connId);
             return;
         }
 
-        if (param->write.len == 0 || param->write.len > PACKET_DATA_SIZE)
+        // Валидация размера данных
+        const size_t dataLen = param->write.len;
+        if (dataLen == 0 || dataLen > MAX_MTU)
         {
-            ESP_LOGW(TAG, "Invalid data size: %d (max %zu). Conn_id: %d",
-                     param->write.len, PACKET_DATA_SIZE, connId);
+            ESP_LOGW(TAG, "Invalid data size: %zu (max %u). Conn: %u",
+                     dataLen, MAX_MTU, connId);
             return;
         }
 
-        // Создаем пакет с учетом connection ID
-        Packet packet{};
-        packet.id = connId; // Сохраняем идентификатор соединения
-        if (!packet.setPayload(param->write.value, param->write.len))
+        // Создание и заполнение пакета
+        Packet packet;
+        packet.id = connId;
+
+        if (!packet.setPayload(param->write.value, dataLen))
         {
-            ESP_LOGE(TAG, "Failed to set payload. Conn_id: %d, Size: %d",
-                     connId, param->write.len);
+            ESP_LOGE(TAG, "Payload set failed. Conn: %u, Size: %zu", connId, dataLen);
             return;
         }
 
-        // Передаем в callback с информацией о соединении
+        // Вызов callback
         mDataCallback->invoke(&packet);
 
-        ESP_LOGD(TAG, "Received %d bytes from connection: %d", packet.size, connId);
-
-        // Отправляем подтверждение (если требуется)
+        // Отправка подтверждения
         const esp_err_t ret = esp_ble_gatts_send_response(
             mGattsIf,
             connId,
@@ -793,7 +899,7 @@ namespace net
 
         if (ret != ESP_OK)
         {
-            ESP_LOGE(TAG, "Failed to send response. Conn_id: %d, Error: %s",
+            ESP_LOGE(TAG, "Response failed. Conn: %u, Error: %s",
                      connId, esp_err_to_name(ret));
         }
     }
